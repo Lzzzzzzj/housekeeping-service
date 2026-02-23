@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.back.mapper.OmsOrderStatusLogMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO oms_order_status_log (order_id, pre_status, post_status, operator, remark)
+        VALUES (#{orderId}, #{preStatus}, #{postStatus}, #{operator}, #{remark})
+    </insert>
+
+</mapper>

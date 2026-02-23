@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.back.mapper.UmsStaffApplyMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.back.entity.ums.UmsStaffApply">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="real_name" property="realName"/>
+        <result column="id_card" property="idCard"/>
+        <result column="phone" property="phone"/>
+        <result column="health_cert_url" property="healthCertUrl"/>
+        <result column="skill_cert_urls" property="skillCertUrls"/>
+        <result column="apply_reason" property="applyReason"/>
+        <result column="status" property="status"/>
+        <result column="reject_reason" property="rejectReason"/>
+        <result column="audit_time" property="auditTime"/>
+        <result column="audit_user_id" property="auditUserId"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ums_staff_apply (user_id, real_name, id_card, phone, health_cert_url, skill_cert_urls, apply_reason, status)
+        VALUES (#{userId}, #{realName}, #{idCard}, #{phone}, #{healthCertUrl}, #{skillCertUrls}, #{applyReason}, #{status})
+    </insert>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT id, user_id, real_name, id_card, phone, health_cert_url, skill_cert_urls, apply_reason,
+               status, reject_reason, audit_time, audit_user_id, create_time, update_time
+        FROM ums_staff_apply
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserIdAndStatus" resultMap="BaseResultMap">
+        SELECT id, user_id, real_name, id_card, phone, health_cert_url, skill_cert_urls, apply_reason,
+               status, reject_reason, audit_time, audit_user_id, create_time, update_time
+        FROM ums_staff_apply
+        WHERE user_id = #{userId} AND status = #{status}
+        ORDER BY create_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectLatestByUserId" resultMap="BaseResultMap">
+        SELECT id, user_id, real_name, id_card, phone, health_cert_url, skill_cert_urls, apply_reason,
+               status, reject_reason, audit_time, audit_user_id, create_time, update_time
+        FROM ums_staff_apply
+        WHERE user_id = #{userId}
+        ORDER BY create_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectByStatus" resultMap="BaseResultMap">
+        SELECT id, user_id, real_name, id_card, phone, health_cert_url, skill_cert_urls, apply_reason,
+               status, reject_reason, audit_time, audit_user_id, create_time, update_time
+        FROM ums_staff_apply
+        WHERE status = #{status}
+        ORDER BY create_time DESC
+        <if test="offset != null and limit != null">
+            LIMIT #{offset}, #{limit}
+        </if>
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT id, user_id, real_name, id_card, phone, health_cert_url, skill_cert_urls, apply_reason,
+               status, reject_reason, audit_time, audit_user_id, create_time, update_time
+        FROM ums_staff_apply
+        ORDER BY create_time DESC
+        <if test="offset != null and limit != null">
+            LIMIT #{offset}, #{limit}
+        </if>
+    </select>
+
+    <update id="updateStatus">
+        UPDATE ums_staff_apply
+        SET status = #{status},
+            reject_reason = #{rejectReason},
+            audit_time = NOW(),
+            audit_user_id = #{auditUserId}
+        WHERE id = #{id}
+    </update>
+
+    <select id="countByStatus" resultType="int">
+        SELECT COUNT(*) FROM ums_staff_apply WHERE status = #{status}
+    </select>
+</mapper>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.back.mapper.PmsServiceMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.back.entity.pms.PmsService">
+        <id column="id" property="id"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="title" property="title"/>
+        <result column="base_price" property="basePrice"/>
+        <result column="unit" property="unit"/>
+        <result column="deposit_type" property="depositType"/>
+        <result column="description" property="description"/>
+    </resultMap>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT id, category_id, title, base_price, unit, deposit_type, description
+        FROM pms_service
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByCategoryId" resultMap="BaseResultMap">
+        SELECT id, category_id, title, base_price, unit, deposit_type, description
+        FROM pms_service
+        WHERE category_id = #{categoryId}
+        ORDER BY id
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO pms_service (category_id, title, base_price, unit, deposit_type, description)
+        VALUES (#{categoryId}, #{title}, #{basePrice}, #{unit}, #{depositType}, #{description})
+    </insert>
+
+    <update id="update">
+        UPDATE pms_service
+        SET category_id = #{categoryId},
+            title = #{title},
+            base_price = #{basePrice},
+            unit = #{unit},
+            deposit_type = #{depositType},
+            description = #{description}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM pms_service WHERE id = #{id}
+    </delete>
+
+    <select id="pageQuery" resultMap="BaseResultMap">
+        SELECT id, category_id, title, base_price, unit, deposit_type, description
+        FROM pms_service
+        <where>
+            <if test="categoryId != null">
+                AND category_id = #{categoryId}
+            </if>
+            <if test="title != null and title != ''">
+                AND title LIKE CONCAT('%', #{title}, '%')
+            </if>
+        </where>
+        ORDER BY id DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+</mapper>

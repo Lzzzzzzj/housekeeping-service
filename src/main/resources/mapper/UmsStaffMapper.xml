@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.back.mapper.UmsStaffMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.back.entity.ums.UmsStaff">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="real_name" property="realName"/>
+        <result column="id_card" property="idCard"/>
+        <result column="health_cert_url" property="healthCertUrl"/>
+        <result column="service_score" property="serviceScore"/>
+        <result column="order_count" property="orderCount"/>
+        <result column="work_status" property="workStatus"/>
+        <result column="audit_status" property="auditStatus"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ums_staff (user_id, real_name, id_card, health_cert_url, service_score, order_count, work_status, audit_status)
+        VALUES (#{userId}, #{realName}, #{idCard}, #{healthCertUrl}, #{serviceScore}, #{orderCount}, #{workStatus}, #{auditStatus})
+    </insert>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT id, user_id, real_name, id_card, health_cert_url, service_score, order_count, work_status, audit_status
+        FROM ums_staff
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT id, user_id, real_name, id_card, health_cert_url, service_score, order_count, work_status, audit_status
+        FROM ums_staff
+        WHERE user_id = #{userId}
+    </select>
+</mapper>

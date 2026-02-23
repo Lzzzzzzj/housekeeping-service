@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.back.mapper.PmsCategoryMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.back.entity.pms.PmsCategory">
+        <id column="id" property="id"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="name" property="name"/>
+        <result column="icon" property="icon"/>
+        <result column="form_config" property="formConfig"/>
+        <result column="sort" property="sort"/>
+        <result column="is_show" property="isShow"/>
+    </resultMap>
+
+    <select id="selectByParentId" resultMap="BaseResultMap">
+        SELECT id, parent_id, name, icon, form_config, sort, is_show
+        FROM pms_category
+        WHERE parent_id = #{parentId} AND is_show = 1
+        ORDER BY sort ASC
+    </select>
+
+    <select id="selectAllShow" resultMap="BaseResultMap">
+        SELECT id, parent_id, name, icon, form_config, sort, is_show
+        FROM pms_category
+        WHERE is_show = 1
+        ORDER BY parent_id, sort ASC
+    </select>
+
+</mapper>
