@@ -18,4 +18,12 @@ public interface OmsOrderMapper {
     List<OmsOrder> selectByMemberId(@Param("memberId") Long memberId, @Param("status") Integer status);
 
     int updateStatus(@Param("id") Long id, @Param("status") Integer status);
+
+    /**
+     * 服务人员接单（抢单）
+     * 仅当订单当前状态为指定状态且尚未被任何服务人员接单时才会更新成功
+     */
+    int grabOrder(@Param("id") Long id,
+                  @Param("staffId") Long staffId,
+                  @Param("expectedStatus") Integer expectedStatus);
 }

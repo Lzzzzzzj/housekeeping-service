@@ -60,4 +60,14 @@
         UPDATE oms_order SET status = #{status} WHERE id = #{id}
     </update>
 
+    <!-- 服务人员接单（抢单），通过状态和 staff_id 判定防止重复接单 -->
+    <update id="grabOrder">
+        UPDATE oms_order
+        SET staff_id = #{staffId},
+            status   = 30
+        WHERE id = #{id}
+          AND status = #{expectedStatus}
+          AND staff_id IS NULL
+    </update>
+
 </mapper>
