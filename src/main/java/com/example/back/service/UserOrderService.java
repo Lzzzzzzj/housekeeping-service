@@ -27,4 +27,9 @@ public interface UserOrderService {
      * 取消订单
      */
     void cancelOrder(Long memberId, Long orderId);
+
+    /**
+     * 用户确认订单完成
+     */
+    void confirmOrder(Long memberId, Long orderId);
 }

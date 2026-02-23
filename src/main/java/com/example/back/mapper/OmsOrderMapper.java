@@ -26,4 +26,9 @@ public interface OmsOrderMapper {
     int grabOrder(@Param("id") Long id,
                   @Param("staffId") Long staffId,
                   @Param("expectedStatus") Integer expectedStatus);
+
+    /**
+     * 抢单池/待接订单列表
+     */
+    List<OmsOrder> selectGrabPool(@Param("status") Integer status);
 }

@@ -136,6 +136,38 @@ public class UserOrderServiceImpl implements UserOrderService {
         omsOrderStatusLogMapper.insert(log);
     }
 
+    @Override
+    @Transactional
+    public void confirmOrder(Long memberId, Long orderId) {
+        OmsOrder order = omsOrderMapper.selectById(orderId);
+        if (order == null) {
+            throw new IllegalArgumentException("订单不存在");
+        }
+        if (!order.getMemberId().equals(memberId)) {
+            throw new IllegalArgumentException("无权操作该订单");
+        }
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalArgumentException("订单已取消，无法确认完成");
+        }
+        if (order.getStatus() == OrderStatus.COMPLETED) {
+            throw new IllegalArgumentException("订单已完成");
+        }
+        if (order.getStatus() != OrderStatus.PENDING_SETTLE) {
+            throw new IllegalArgumentException("当前订单状态不允许确认完成");
+        }
+
+        int preStatus = order.getStatus();
+        omsOrderMapper.updateStatus(orderId, OrderStatus.COMPLETED);
+
+        OmsOrderStatusLog log = new OmsOrderStatusLog();
+        log.setOrderId(orderId);
+        log.setPreStatus(preStatus);
+        log.setPostStatus(OrderStatus.COMPLETED);
+        log.setOperator("user:" + memberId);
+        log.setRemark("用户确认完成");
+        omsOrderStatusLogMapper.insert(log);
+    }
+
     private String toJson(Map<String, Object> map) {
         try {
             return objectMapper.writeValueAsString(map);

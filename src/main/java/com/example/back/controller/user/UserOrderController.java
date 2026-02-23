@@ -58,6 +58,16 @@ public class UserOrderController {
         return Result.success();
     }
 
+    /**
+     * 用户确认订单完成
+     */
+    @PostMapping("/order/confirm")
+    public Result<Void> confirmOrder(@Valid @RequestBody OrderConfirmDTO dto) {
+        Long memberId = requireMemberId();
+        userOrderService.confirmOrder(memberId, dto.getOrderId());
+        return Result.success();
+    }
+
     private Long requireMemberId() {
         Long memberId = UserContext.getMemberId();
         if (memberId == null) {

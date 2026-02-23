@@ -70,4 +70,17 @@
           AND staff_id IS NULL
     </update>
 
+    <!-- 抢单池/待接订单列表：当前所有待接单且尚未被任何服务人员接单 -->
+    <select id="selectGrabPool" resultMap="BaseResultMap">
+        SELECT o.id, o.order_sn, o.member_id, o.staff_id, o.service_id, o.total_amount, o.pay_amount,
+               o.status, o.appointment_time, o.address_info, o.ext_info, o.create_time,
+               s.title AS service_title
+        FROM oms_order o
+                 LEFT JOIN pms_service s ON o.service_id = s.id
+        WHERE o.status = #{status}
+          AND o.staff_id IS NULL
+        ORDER BY o.create_time DESC
+        LIMIT 50
+    </select>
+
 </mapper>
