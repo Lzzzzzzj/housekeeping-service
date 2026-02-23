@@ -55,6 +55,7 @@ public class UserOrderController {
     public Result<Void> cancelOrder(@Valid @RequestBody OrderCancelDTO dto) {
         Long memberId = requireMemberId();
         userOrderService.cancelOrder(memberId, dto.getOrderId());
+
         return Result.success();
     }
 
@@ -65,6 +66,14 @@ public class UserOrderController {
     public Result<Void> confirmOrder(@Valid @RequestBody OrderConfirmDTO dto) {
         Long memberId = requireMemberId();
         userOrderService.confirmOrder(memberId, dto.getOrderId());
+        return Result.success();
+    }
+
+    /**
+     * 测试
+     */
+    @PostMapping("/order/test")
+    public Result<Void> testOrder() {
         return Result.success();
     }
 
