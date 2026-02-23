@@ -16,5 +16,12 @@
         VALUES (#{orderId}, #{title}, #{amount}, #{payStatus}, #{evidencePics})
     </insert>
 
+    <select id="sumPaidAmountByOrderId" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(amount), 0)
+        FROM oms_order_extra
+        WHERE order_id = #{orderId}
+          AND pay_status = 1
+    </select>
+
 </mapper>
 

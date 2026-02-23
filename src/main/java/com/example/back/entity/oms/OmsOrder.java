@@ -22,6 +22,18 @@ public class OmsOrder {
     private LocalDateTime appointmentTime;
     private String addressInfo;   // JSON 地址快照
     private String extInfo;       // JSON 动态表单数据
+    /**
+     * 本单平台抽成金额
+     */
+    private BigDecimal platformAmount;
+    /**
+     * 本单师傅收入金额
+     */
+    private BigDecimal staffAmount;
+    /**
+     * 结算完成时间
+     */
+    private LocalDateTime settleTime;
     private LocalDateTime createTime;
 
     /** 关联查询：服务标题 */

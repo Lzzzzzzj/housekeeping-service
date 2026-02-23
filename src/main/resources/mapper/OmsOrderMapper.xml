@@ -14,20 +14,24 @@
         <result column="appointment_time" property="appointmentTime"/>
         <result column="address_info" property="addressInfo"/>
         <result column="ext_info" property="extInfo"/>
+        <result column="platform_amount" property="platformAmount"/>
+        <result column="staff_amount" property="staffAmount"/>
+        <result column="settle_time" property="settleTime"/>
         <result column="create_time" property="createTime"/>
         <result column="service_title" property="serviceTitle"/>
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO oms_order (order_sn, member_id, staff_id, service_id, total_amount, pay_amount, status,
-                              appointment_time, address_info, ext_info)
+                              appointment_time, address_info, ext_info, platform_amount, staff_amount, settle_time)
         VALUES (#{orderSn}, #{memberId}, #{staffId}, #{serviceId}, #{totalAmount}, #{payAmount}, #{status},
-                #{appointmentTime}, #{addressInfo}, #{extInfo})
+                #{appointmentTime}, #{addressInfo}, #{extInfo}, #{platformAmount}, #{staffAmount}, #{settleTime})
     </insert>
 
     <select id="selectById" resultMap="BaseResultMap">
         SELECT o.id, o.order_sn, o.member_id, o.staff_id, o.service_id, o.total_amount, o.pay_amount,
-               o.status, o.appointment_time, o.address_info, o.ext_info, o.create_time,
+               o.status, o.appointment_time, o.address_info, o.ext_info,
+               o.platform_amount, o.staff_amount, o.settle_time, o.create_time,
                s.title AS service_title
         FROM oms_order o
         LEFT JOIN pms_service s ON o.service_id = s.id
@@ -36,7 +40,8 @@
 
     <select id="selectByOrderSn" resultMap="BaseResultMap">
         SELECT o.id, o.order_sn, o.member_id, o.staff_id, o.service_id, o.total_amount, o.pay_amount,
-               o.status, o.appointment_time, o.address_info, o.ext_info, o.create_time,
+               o.status, o.appointment_time, o.address_info, o.ext_info,
+               o.platform_amount, o.staff_amount, o.settle_time, o.create_time,
                s.title AS service_title
         FROM oms_order o
         LEFT JOIN pms_service s ON o.service_id = s.id
@@ -45,7 +50,8 @@
 
     <select id="selectByMemberId" resultMap="BaseResultMap">
         SELECT o.id, o.order_sn, o.member_id, o.staff_id, o.service_id, o.total_amount, o.pay_amount,
-               o.status, o.appointment_time, o.address_info, o.ext_info, o.create_time,
+               o.status, o.appointment_time, o.address_info, o.ext_info,
+               o.platform_amount, o.staff_amount, o.settle_time, o.create_time,
                s.title AS service_title
         FROM oms_order o
         LEFT JOIN pms_service s ON o.service_id = s.id
@@ -58,6 +64,15 @@
 
     <update id="updateStatus">
         UPDATE oms_order SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <update id="updateSettleInfo">
+        UPDATE oms_order
+        SET platform_amount = #{platformAmount},
+            staff_amount    = #{staffAmount},
+            settle_time     = #{settleTime},
+            status          = #{status}
+        WHERE id = #{id}
     </update>
 
     <!-- 服务人员接单（抢单），通过状态和 staff_id 判定防止重复接单 -->
@@ -73,7 +88,8 @@
     <!-- 抢单池/待接订单列表：当前所有待接单且尚未被任何服务人员接单 -->
     <select id="selectGrabPool" resultMap="BaseResultMap">
         SELECT o.id, o.order_sn, o.member_id, o.staff_id, o.service_id, o.total_amount, o.pay_amount,
-               o.status, o.appointment_time, o.address_info, o.ext_info, o.create_time,
+               o.status, o.appointment_time, o.address_info, o.ext_info,
+               o.platform_amount, o.staff_amount, o.settle_time, o.create_time,
                s.title AS service_title
         FROM oms_order o
                  LEFT JOIN pms_service s ON o.service_id = s.id

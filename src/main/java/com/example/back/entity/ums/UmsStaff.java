@@ -20,4 +20,8 @@ public class UmsStaff {
     private Integer orderCount;
     private Integer workStatus;
     private Integer auditStatus;
+    /**
+     * 师傅账户余额（可提现）
+     */
+    private BigDecimal balance;
 }

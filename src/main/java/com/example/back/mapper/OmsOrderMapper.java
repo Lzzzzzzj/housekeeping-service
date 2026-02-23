@@ -4,6 +4,8 @@ import com.example.back.entity.oms.OmsOrder;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.math.BigDecimal;
+
 import java.util.List;
 
 @Mapper
@@ -31,4 +33,13 @@ public interface OmsOrderMapper {
      * 抢单池/待接订单列表
      */
     List<OmsOrder> selectGrabPool(@Param("status") Integer status);
+
+    /**
+     * 更新订单结算信息并将状态置为已完成
+     */
+    int updateSettleInfo(@Param("id") Long id,
+                         @Param("platformAmount") BigDecimal platformAmount,
+                         @Param("staffAmount") BigDecimal staffAmount,
+                         @Param("settleTime") java.time.LocalDateTime settleTime,
+                         @Param("status") Integer status);
 }

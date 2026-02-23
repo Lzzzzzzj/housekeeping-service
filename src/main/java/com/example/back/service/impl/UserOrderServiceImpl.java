@@ -6,10 +6,17 @@ import com.example.back.dto.OrderPayVO;
 import com.example.back.entity.oms.OmsOrder;
 import com.example.back.entity.oms.OmsOrderStatusLog;
 import com.example.back.entity.pms.PmsService;
+import com.example.back.entity.sys.SysConfig;
+import com.example.back.entity.ums.UmsStaff;
+import com.example.back.entity.ums.UmsStaffWalletLog;
 import com.example.back.mapper.OmsOrderMapper;
 import com.example.back.mapper.OmsOrderStatusLogMapper;
+import com.example.back.mapper.OmsOrderExtraMapper;
 import com.example.back.mapper.PmsServiceMapper;
+import com.example.back.mapper.SysConfigMapper;
 import com.example.back.mapper.UmsMemberMapper;
+import com.example.back.mapper.UmsStaffMapper;
+import com.example.back.mapper.UmsStaffWalletLogMapper;
 import com.example.back.service.UserOrderService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,8 +37,12 @@ public class UserOrderServiceImpl implements UserOrderService {
 
     private final OmsOrderMapper omsOrderMapper;
     private final OmsOrderStatusLogMapper omsOrderStatusLogMapper;
+    private final OmsOrderExtraMapper omsOrderExtraMapper;
     private final PmsServiceMapper pmsServiceMapper;
     private final UmsMemberMapper umsMemberMapper;
+    private final UmsStaffMapper UmsStaffMapper;
+    private final UmsStaffWalletLogMapper umsStaffWalletLogMapper;
+    private final SysConfigMapper sysConfigMapper;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -157,14 +168,76 @@ public class UserOrderServiceImpl implements UserOrderService {
         }
 
         int preStatus = order.getStatus();
-        omsOrderMapper.updateStatus(orderId, OrderStatus.COMPLETED);
+
+        // 1. 计算本单总收入（实付 + 已支付增项金额）
+        BigDecimal orderIncome = order.getPayAmount() != null ? order.getPayAmount() : BigDecimal.ZERO;
+        BigDecimal extraPaidAmount = omsOrderExtraMapper.sumPaidAmountByOrderId(orderId);
+        if (extraPaidAmount != null) {
+            orderIncome = orderIncome.add(extraPaidAmount);
+        }
+
+        // 2. 读取结算配置（固定金额 / 百分比），计算平台抽成和师傅收入
+        BigDecimal platformAmount = BigDecimal.ZERO;
+        BigDecimal staffAmount = BigDecimal.ZERO;
+
+        SysConfig modeCfg = sysConfigMapper.selectByKey("settle.mode");
+        String mode = modeCfg != null ? modeCfg.getConfigValue() : "percent";
+
+        if ("fixed".equalsIgnoreCase(mode)) {
+            SysConfig fixedCfg = sysConfigMapper.selectByKey("settle.fixed_amount");
+            BigDecimal fixedAmount = fixedCfg != null ? new BigDecimal(fixedCfg.getConfigValue()) : BigDecimal.ZERO;
+            if (fixedAmount.compareTo(orderIncome) > 0) {
+                platformAmount = orderIncome;
+            } else {
+                platformAmount = fixedAmount;
+            }
+            staffAmount = orderIncome.subtract(platformAmount);
+        } else { // 默认按百分比
+            SysConfig percentCfg = sysConfigMapper.selectByKey("settle.percent");
+            BigDecimal percent = percentCfg != null ? new BigDecimal(percentCfg.getConfigValue()) : new BigDecimal("0.2");
+            if (percent.compareTo(BigDecimal.ZERO) < 0) {
+                percent = BigDecimal.ZERO;
+            }
+            if (percent.compareTo(BigDecimal.ONE) > 0) {
+                percent = BigDecimal.ONE;
+            }
+            platformAmount = orderIncome.multiply(percent);
+            staffAmount = orderIncome.subtract(platformAmount);
+        }
+
+        if (staffAmount.compareTo(BigDecimal.ZERO) < 0) {
+            staffAmount = BigDecimal.ZERO;
+        }
+
+        // 3. 更新订单结算字段并标记为已完成
+        omsOrderMapper.updateSettleInfo(orderId, platformAmount, staffAmount, LocalDateTime.now(), OrderStatus.COMPLETED);
+
+        // 4. 将师傅收入计入师傅钱包余额，并写入钱包流水
+        if (order.getStaffId() != null && staffAmount.compareTo(BigDecimal.ZERO) > 0) {
+            UmsStaff staff = UmsStaffMapper.selectById(order.getStaffId());
+            if (staff != null) {
+                BigDecimal beforeBalance = staff.getBalance() != null ? staff.getBalance() : BigDecimal.ZERO;
+                BigDecimal afterBalance = beforeBalance.add(staffAmount);
+                staff.setBalance(afterBalance);
+                UmsStaffMapper.updateBalance(staff.getId(), afterBalance);
+
+                UmsStaffWalletLog walletLog = new UmsStaffWalletLog();
+                walletLog.setStaffId(staff.getId());
+                walletLog.setOrderId(orderId);
+                walletLog.setChangeType(1);
+                walletLog.setChangeAmount(staffAmount);
+                walletLog.setBalanceAfter(afterBalance);
+                walletLog.setRemark("订单收入结算");
+                umsStaffWalletLogMapper.insert(walletLog);
+            }
+        }
 
         OmsOrderStatusLog log = new OmsOrderStatusLog();
         log.setOrderId(orderId);
         log.setPreStatus(preStatus);
         log.setPostStatus(OrderStatus.COMPLETED);
         log.setOperator("user:" + memberId);
-        log.setRemark("用户确认完成");
+        log.setRemark("用户确认完成，订单结算完成");
         omsOrderStatusLogMapper.insert(log);
     }
 

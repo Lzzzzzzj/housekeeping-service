@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.back.mapper.UmsStaffWalletLogMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.back.entity.ums.UmsStaffWalletLog">
+        <id column="id" property="id"/>
+        <result column="staff_id" property="staffId"/>
+        <result column="order_id" property="orderId"/>
+        <result column="change_type" property="changeType"/>
+        <result column="change_amount" property="changeAmount"/>
+        <result column="balance_after" property="balanceAfter"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ums_staff_wallet_log (staff_id, order_id, change_type, change_amount, balance_after, remark)
+        VALUES (#{staffId}, #{orderId}, #{changeType}, #{changeAmount}, #{balanceAfter}, #{remark})
+    </insert>
+
+</mapper>
+
