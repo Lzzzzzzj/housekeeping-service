@@ -42,5 +42,12 @@
         ORDER BY obtain_time DESC
     </select>
 
+    <update id="bindOrder">
+        UPDATE mkt_user_coupon
+        SET order_id = #{orderId}
+        WHERE id = #{id}
+          AND order_id IS NULL
+    </update>
+
 </mapper>
 

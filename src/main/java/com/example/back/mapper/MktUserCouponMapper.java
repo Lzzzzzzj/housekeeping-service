@@ -24,5 +24,11 @@ public interface MktUserCouponMapper {
      */
     List<MktUserCoupon> selectByMember(@Param("memberId") Long memberId,
                                        @Param("status") Integer status);
+
+    /**
+     * 将优惠券绑定到订单（用于一单仅一券的占用）
+     */
+    int bindOrder(@Param("id") Long id,
+                  @Param("orderId") Long orderId);
 }
 

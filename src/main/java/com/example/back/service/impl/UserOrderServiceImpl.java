@@ -3,12 +3,16 @@ package com.example.back.service.impl;
 import com.example.back.common.constant.OrderStatus;
 import com.example.back.dto.OrderCreateDTO;
 import com.example.back.dto.OrderPayVO;
+import com.example.back.entity.mkt.MktCoupon;
+import com.example.back.entity.mkt.MktUserCoupon;
 import com.example.back.entity.oms.OmsOrder;
 import com.example.back.entity.oms.OmsOrderStatusLog;
 import com.example.back.entity.pms.PmsService;
 import com.example.back.entity.sys.SysConfig;
 import com.example.back.entity.ums.UmsStaff;
 import com.example.back.entity.ums.UmsStaffWalletLog;
+import com.example.back.mapper.MktCouponMapper;
+import com.example.back.mapper.MktUserCouponMapper;
 import com.example.back.mapper.OmsOrderMapper;
 import com.example.back.mapper.OmsOrderStatusLogMapper;
 import com.example.back.mapper.OmsOrderExtraMapper;
@@ -44,6 +48,8 @@ public class UserOrderServiceImpl implements UserOrderService {
     private final UmsStaffMapper UmsStaffMapper;
     private final UmsStaffWalletLogMapper umsStaffWalletLogMapper;
     private final SysConfigMapper sysConfigMapper;
+    private final MktCouponMapper mktCouponMapper;
+    private final MktUserCouponMapper mktUserCouponMapper;
     private final AutoDispatchService autoDispatchService;
     private final ObjectMapper objectMapper;
 
@@ -65,6 +71,59 @@ public class UserOrderServiceImpl implements UserOrderService {
         String extJson = dto.getExtInfo() != null ? toJson(dto.getExtInfo()) : null;
 
         BigDecimal totalAmount = service.getBasePrice();
+        if (totalAmount == null || totalAmount.compareTo(BigDecimal.ZERO) < 0) {
+            totalAmount = BigDecimal.ZERO;
+        }
+
+        // 处理优惠券：一单仅可使用一张券 + 非参与服务限制
+        Long userCouponId = dto.getUserCouponId();
+        Long couponId = null;
+        BigDecimal couponAmount = BigDecimal.ZERO;
+        if (userCouponId != null) {
+            if (service.getAllowCoupon() != null && service.getAllowCoupon() == 0) {
+                throw new IllegalArgumentException("该服务不参与优惠活动");
+            }
+            MktUserCoupon userCoupon = mktUserCouponMapper.selectById(userCouponId);
+            if (userCoupon == null || !memberId.equals(userCoupon.getMemberId())) {
+                throw new IllegalArgumentException("优惠券不可用");
+            }
+            if (userCoupon.getOrderId() != null) {
+                throw new IllegalArgumentException("该优惠券已绑定其他订单，不能重复使用");
+            }
+            if (userCoupon.getStatus() != null && userCoupon.getStatus() != 0) {
+                throw new IllegalArgumentException("优惠券状态异常，无法使用");
+            }
+            if (userCoupon.getExpireTime() != null && userCoupon.getExpireTime().isBefore(LocalDateTime.now())) {
+                throw new IllegalArgumentException("优惠券已过期");
+            }
+            MktCoupon coupon = mktCouponMapper.selectById(userCoupon.getCouponId());
+            if (coupon == null || coupon.getStatus() == null || coupon.getStatus() != 1) {
+                throw new IllegalArgumentException("优惠券不存在或已下架");
+            }
+            LocalDateTime now = LocalDateTime.now();
+            if (coupon.getUseStartTime() != null && coupon.getUseStartTime().isAfter(now)) {
+                throw new IllegalArgumentException("优惠券未到可使用时间");
+            }
+            if (coupon.getUseEndTime() != null && coupon.getUseEndTime().isBefore(now)) {
+                throw new IllegalArgumentException("优惠券已过期");
+            }
+            // 满减校验
+            if (coupon.getCouponType() != null && coupon.getCouponType() == 2) {
+                BigDecimal minAmount = coupon.getMinAmount() != null ? coupon.getMinAmount() : BigDecimal.ZERO;
+                if (totalAmount.compareTo(minAmount) < 0) {
+                    throw new IllegalArgumentException("订单金额未达到优惠券使用门槛");
+                }
+            }
+            couponAmount = coupon.getAmount() != null ? coupon.getAmount() : BigDecimal.ZERO;
+            if (couponAmount.compareTo(BigDecimal.ZERO) < 0) {
+                couponAmount = BigDecimal.ZERO;
+            }
+            if (couponAmount.compareTo(totalAmount) > 0) {
+                couponAmount = totalAmount;
+            }
+            couponId = coupon.getId();
+        }
+
         String orderSn = "HK" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 
         OmsOrder order = new OmsOrder();
@@ -73,13 +132,24 @@ public class UserOrderServiceImpl implements UserOrderService {
         order.setStaffId(null);
         order.setServiceId(service.getId());
         order.setTotalAmount(totalAmount);
-        order.setPayAmount(totalAmount);
+        order.setCouponId(couponId);
+        order.setUserCouponId(userCouponId);
+        order.setCouponAmount(couponAmount);
+        order.setPayAmount(totalAmount.subtract(couponAmount));
         order.setStatus(OrderStatus.PENDING_PAY);
         order.setAppointmentTime(dto.getAppointmentTime());
         order.setAddressInfo(addressJson);
         order.setExtInfo(extJson);
 
         omsOrderMapper.insert(order);
+
+        // 绑定用户优惠券到订单，防止复用
+        if (userCouponId != null) {
+            int updated = mktUserCouponMapper.bindOrder(userCouponId, order.getId());
+            if (updated <= 0) {
+                throw new IllegalArgumentException("优惠券状态异常，无法使用");
+            }
+        }
 
         OmsOrderStatusLog log = new OmsOrderStatusLog();
         log.setOrderId(order.getId());
