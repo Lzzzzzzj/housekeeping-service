@@ -137,6 +137,8 @@
 }
 ```
 
+#### 1.2.2 （管理员说明）pms_category 增删改查见「三、管理员端接口 - 类目管理」
+
 ---
 
 ### 1.3 服务（用户端仅查）
@@ -748,6 +750,75 @@ action 枚举：`DEPART`(出发)、`ARRIVE`(到达)、`START`(开始)、`FINISH`
 
 **认证**：需管理员登录（userType=3），请求头携带 token。
 
+### 3.0 管理员登录
+
+> 依据《概要设计.md》中统一用户表 `sys_user` 与管理员扩展表 `sys_admin` 的设计，管理员登录时除了发放 token 外，需要返回管理员扩展信息。
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `POST /api/v1/admin/login` |
+| **请求体** | JSON |
+| **说明** | 仅 `sys_user.user_type = 3` 且在 `sys_admin` 中存在对应记录的账号可登录 |
+
+**请求体示例（正常）**：
+
+```json
+{
+  "usernameOrPhone": "admin",
+  "password": "123456"
+}
+```
+
+> `usernameOrPhone` 可为管理员用户名或绑定手机号。
+
+**预期输出（成功）**：
+
+- HTTP 200
+- `code`: 200，`msg`: "success"
+- `data`: AdminLoginVO（包含 token、基础用户信息与 `sys_admin` 信息）
+
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "token": "eyJhbGc...",
+    "userId": 100,
+    "username": "admin",
+    "nickname": "超级管理员",
+    "phone": "13700137000",
+    "avatar": null,
+    "userType": 3,
+    "sysAdmin": {
+      "id": 1,
+      "userId": 100,
+      "adminType": 1,
+      "balance": 1000.00,
+      "createdBy": null
+    }
+  }
+}
+```
+
+字段说明（建议实现时遵循）：
+
+- **token**：JWT 或其他形式的认证令牌，后续接口通过 `Authorization: Bearer <token>` 鉴权。
+- **userType**：固定为 3，表示管理员（含超级/普通）。
+- **sysAdmin.id**：`sys_admin` 表主键。
+- **sysAdmin.adminType**：0-普通管理员，1-超级管理员。
+- **sysAdmin.balance**：管理员账户余额（普通管理员用于活动经费等，超级管理员可为 0）。
+- **sysAdmin.createdBy**：创建者 `user_id`，超级管理员初始化时可为 `null`。
+
+**异常用例**：
+
+| 场景 | 预期输出 |
+|------|----------|
+| `usernameOrPhone` 为空 | code 500，msg 含「用户名或手机号不能为空」 |
+| `password` 为空 | code 500，msg 含「密码不能为空」 |
+| 账号不存在 / 密码错误 | code 500，msg 含「账号或密码错误」 |
+| 账号存在但 `user_type != 3` | code 500，msg 含「需要管理员账号」或类似提示 |
+| `sys_admin` 中未找到对应记录 | code 500，msg 含「管理员信息缺失」或类似提示 |
+
 ### 3.1 管理员账号（超级管理员）
 
 #### 3.1.1 创建普通管理员
@@ -844,6 +915,84 @@ depositType：0-全额支付，1-只付定金，2-线下报价。
 | **Query** | categoryId(可选), title(可选), page(默认1), pageSize(默认20) |
 
 **预期输出（成功）**：HTTP 200，`code`: 200，`data`: PmsService 数组
+
+---
+
+### 3.6 类目管理（管理员）
+
+**基础路径**：`/api/v1/admin/category`
+
+#### 3.6.1 创建类目
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `POST /api/v1/admin/category/create` |
+| **请求体** | CategorySaveDTO |
+
+**输入示例**：
+```json
+{
+  "parentId": 0,
+  "name": "日常保洁",
+  "icon": "https://xxx/icon-clean.png",
+  "formConfig": "{\"fields\":[{\"name\":\"rooms\",\"type\":\"number\"}]}",
+  "sort": 0,
+  "isShow": 1
+}
+```
+
+**预期输出（成功）**：HTTP 200，`code`: 200，`data`: null
+
+---
+
+#### 3.6.2 修改类目
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `PUT /api/v1/admin/category/{id}` |
+| **路径参数** | id：类目ID |
+| **请求体** | CategorySaveDTO（同创建） |
+
+**预期输出（成功）**：HTTP 200，`code`: 200，`data`: null
+
+---
+
+#### 3.6.3 删除类目
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `DELETE /api/v1/admin/category/{id}` |
+
+**输入示例**：`DELETE /api/v1/admin/category/1`
+
+**预期输出（成功）**：HTTP 200，`code`: 200，`data`: null
+
+---
+
+#### 3.6.4 获取单个类目详情
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `GET /api/v1/admin/category/{id}` |
+
+**预期输出（成功）**：HTTP 200，`code`: 200，`data`: PmsCategory
+
+---
+
+#### 3.6.5 分页查询类目列表（按名称模糊）
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `GET /api/v1/admin/category/page` |
+| **Query** | name(可选，按名称模糊), page(默认1), pageSize(默认20) |
+
+**输入示例**：
+- `GET /api/v1/admin/category/page`
+- `GET /api/v1/admin/category/page?name=保洁&page=1&pageSize=10`
+
+**预期输出（成功）**：
+- HTTP 200，`code`: 200
+- `data`: PmsCategory 数组
 
 ---
 
@@ -1131,12 +1280,18 @@ depositType：0-全额支付，1-只付定金，2-线下报价。
 | 师傅-订单 | PUT | /api/v1/staff/order/action | 服务动作 |
 | 师傅-订单 | POST | /api/v1/staff/order/extra-fee | 现场加价 |
 | 师傅-订单 | PUT | /api/v1/staff/order/setting/auto-accept | 自动接单开关 |
+| 管理员-认证 | POST | /api/v1/admin/login | 管理员登录 |
 | 管理员-账号 | POST | /api/v1/admin/admin/create | 创建普通管理员 |
 | 管理员-服务 | POST | /api/v1/admin/service/create | 创建服务 |
 | 管理员-服务 | PUT | /api/v1/admin/service/{id} | 更新服务 |
 | 管理员-服务 | DELETE | /api/v1/admin/service/{id} | 删除服务 |
 | 管理员-服务 | GET | /api/v1/admin/service/{id} | 服务详情 |
 | 管理员-服务 | GET | /api/v1/admin/service/page | 服务分页 |
+| 管理员-类目 | POST | /api/v1/admin/category/create | 创建类目 |
+| 管理员-类目 | PUT | /api/v1/admin/category/{id} | 更新类目 |
+| 管理员-类目 | DELETE | /api/v1/admin/category/{id} | 删除类目 |
+| 管理员-类目 | GET | /api/v1/admin/category/{id} | 类目详情 |
+| 管理员-类目 | GET | /api/v1/admin/category/page | 类目分页 |
 | 管理员-优惠券 | POST | /api/v1/admin/coupon/create | 创建优惠券 |
 | 管理员-优惠券 | PUT | /api/v1/admin/coupon/{id} | 更新优惠券 |
 | 管理员-优惠券 | PUT | /api/v1/admin/coupon/{id}/status | 上架/下架优惠券 |

@@ -26,4 +26,42 @@
         ORDER BY parent_id, sort ASC
     </select>
 
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT id, parent_id, name, icon, form_config, sort, is_show
+        FROM pms_category
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.example.back.entity.pms.PmsCategory" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO pms_category (parent_id, name, icon, form_config, sort, is_show)
+        VALUES (#{parentId}, #{name}, #{icon}, #{formConfig}, #{sort}, #{isShow})
+    </insert>
+
+    <update id="update" parameterType="com.example.back.entity.pms.PmsCategory">
+        UPDATE pms_category
+        SET parent_id = #{parentId},
+            name = #{name},
+            icon = #{icon},
+            form_config = #{formConfig},
+            sort = #{sort},
+            is_show = #{isShow}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM pms_category WHERE id = #{id}
+    </delete>
+
+    <select id="pageQuery" resultMap="BaseResultMap">
+        SELECT id, parent_id, name, icon, form_config, sort, is_show
+        FROM pms_category
+        <where>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+        </where>
+        ORDER BY sort ASC, id ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
 </mapper>
