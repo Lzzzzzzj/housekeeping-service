@@ -64,6 +64,16 @@ public class StaffOrderController {
         return Result.success();
     }
 
+    /**
+     * 开启/关闭自动接单
+     */
+    @PutMapping("/setting/auto-accept")
+    public Result<Void> updateAutoAccept(@RequestParam boolean enable) {
+        Long staffUserId = requireStaffUserId();
+        staffOrderService.updateAutoAccept(staffUserId, enable);
+        return Result.success();
+    }
+
     private Long requireStaffUserId() {
         Long userId = UserContext.getUserId();
         Integer userType = UserContext.getUserType();

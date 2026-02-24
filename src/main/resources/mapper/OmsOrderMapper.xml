@@ -99,4 +99,10 @@
         LIMIT 50
     </select>
 
+    <select id="countInProgressByStaffId" resultType="int">
+        SELECT COUNT(*) FROM oms_order
+        WHERE staff_id = #{staffId}
+          AND status IN (30, 40, 50)
+    </select>
+
 </mapper>

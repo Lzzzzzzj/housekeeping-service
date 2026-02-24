@@ -21,6 +21,10 @@ public class UmsStaff {
     private Integer workStatus;
     private Integer auditStatus;
     /**
+     * 是否自动接单: 0-否, 1-是
+     */
+    private Integer autoAccept;
+    /**
      * 师傅账户余额（可提现）
      */
     private BigDecimal balance;

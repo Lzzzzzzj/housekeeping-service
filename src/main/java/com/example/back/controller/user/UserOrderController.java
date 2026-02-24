@@ -39,6 +39,17 @@ public class UserOrderController {
     }
 
     /**
+     * 支付成功确认（前端支付成功后调用，或支付网关回调时调用）
+     * 将订单置为待接单并触发自动派单。
+     */
+    @PostMapping("/order/pay-success")
+    public Result<Void> paySuccess(@Valid @RequestBody OrderPayDTO dto) {
+        Long memberId = requireMemberId();
+        userOrderService.confirmPaySuccess(memberId, dto.getOrderSn());
+        return Result.success();
+    }
+
+    /**
      * 个人订单中心 (支持按状态过滤)
      */
     @GetMapping("/order/list")

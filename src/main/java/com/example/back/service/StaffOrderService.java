@@ -33,5 +33,10 @@ public interface StaffOrderService {
      * 发起现场加价/增项单
      */
     void createExtraFee(Long staffUserId, OrderExtraFeeDTO dto);
+
+    /**
+     * 开启/关闭自动接单
+     */
+    void updateAutoAccept(Long staffUserId, boolean enable);
 }
 

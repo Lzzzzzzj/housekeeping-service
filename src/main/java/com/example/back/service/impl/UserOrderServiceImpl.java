@@ -17,6 +17,7 @@ import com.example.back.mapper.SysConfigMapper;
 import com.example.back.mapper.UmsMemberMapper;
 import com.example.back.mapper.UmsStaffMapper;
 import com.example.back.mapper.UmsStaffWalletLogMapper;
+import com.example.back.service.AutoDispatchService;
 import com.example.back.service.UserOrderService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,6 +44,7 @@ public class UserOrderServiceImpl implements UserOrderService {
     private final UmsStaffMapper UmsStaffMapper;
     private final UmsStaffWalletLogMapper umsStaffWalletLogMapper;
     private final SysConfigMapper sysConfigMapper;
+    private final AutoDispatchService autoDispatchService;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -111,6 +113,32 @@ public class UserOrderServiceImpl implements UserOrderService {
         vo.setTimeStamp(String.valueOf(System.currentTimeMillis() / 1000));
         vo.setNonceStr(UUID.randomUUID().toString().replace("-", ""));
         return vo;
+    }
+
+    @Override
+    @Transactional
+    public void confirmPaySuccess(Long memberId, String orderSn) {
+        OmsOrder order = omsOrderMapper.selectByOrderSn(orderSn);
+        if (order == null) {
+            throw new IllegalArgumentException("订单不存在");
+        }
+        if (memberId != null && !order.getMemberId().equals(memberId)) {
+            throw new IllegalArgumentException("无权操作该订单");
+        }
+        if (order.getStatus() != OrderStatus.PENDING_PAY) {
+            throw new IllegalArgumentException("订单状态不允许确认支付");
+        }
+
+        omsOrderMapper.updateStatus(order.getId(), OrderStatus.PENDING_ACCEPT);
+        OmsOrderStatusLog log = new OmsOrderStatusLog();
+        log.setOrderId(order.getId());
+        log.setPreStatus(OrderStatus.PENDING_PAY);
+        log.setPostStatus(OrderStatus.PENDING_ACCEPT);
+        log.setOperator(memberId != null ? "user:" + memberId : "notify:pay");
+        log.setRemark("支付成功，待接单");
+        omsOrderStatusLogMapper.insert(log);
+
+        autoDispatchService.tryAutoAssign(order.getId());
     }
 
     @Override

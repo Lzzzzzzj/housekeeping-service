@@ -42,4 +42,9 @@ public interface OmsOrderMapper {
                          @Param("staffAmount") BigDecimal staffAmount,
                          @Param("settleTime") java.time.LocalDateTime settleTime,
                          @Param("status") Integer status);
+
+    /**
+     * 统计某师傅当前进行中订单数（状态 30 待服务、40 服务中、50 待结算）
+     */
+    int countInProgressByStaffId(@Param("staffId") Long staffId);
 }

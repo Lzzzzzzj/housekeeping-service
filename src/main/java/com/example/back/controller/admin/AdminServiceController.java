@@ -35,7 +35,7 @@ public class AdminServiceController {
     /**
      * 创建服务类型
      */
-    @PostMapping
+    @PostMapping("/create")
     public Result<Void> create(@Valid @RequestBody ServiceSaveDTO dto) {
         requireAdmin();
         serviceManageService.create(dto);

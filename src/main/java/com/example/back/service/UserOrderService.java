@@ -19,6 +19,12 @@ public interface UserOrderService {
     OrderPayVO pay(Long memberId, String orderSn);
 
     /**
+     * 支付成功回调：将订单置为待接单并触发自动派单。
+     * 若 memberId 非空则校验订单归属；供支付网关回调时传 null 跳过校验。
+     */
+    void confirmPaySuccess(Long memberId, String orderSn);
+
+    /**
      * 订单列表
      */
     List<OmsOrder> listOrders(Long memberId, Integer status);

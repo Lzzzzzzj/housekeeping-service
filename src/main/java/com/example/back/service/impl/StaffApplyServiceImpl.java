@@ -137,6 +137,8 @@ public class StaffApplyServiceImpl implements StaffApplyService {
             staff.setOrderCount(0);
             staff.setWorkStatus(STAFF_WORK_STATUS_REST);
             staff.setAuditStatus(STAFF_AUDIT_APPROVED);
+            staff.setAutoAccept(0);
+            staff.setBalance(BigDecimal.ZERO);
             umsStaffMapper.insert(staff);
 
             sysUserMapper.updateUserType(apply.getUserId(), USER_TYPE_STAFF);

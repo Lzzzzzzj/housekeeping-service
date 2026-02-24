@@ -12,22 +12,23 @@
         <result column="order_count" property="orderCount"/>
         <result column="work_status" property="workStatus"/>
         <result column="audit_status" property="auditStatus"/>
+        <result column="auto_accept" property="autoAccept"/>
         <result column="balance" property="balance"/>
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO ums_staff (user_id, real_name, id_card, health_cert_url, service_score, order_count, work_status, audit_status, balance)
-        VALUES (#{userId}, #{realName}, #{idCard}, #{healthCertUrl}, #{serviceScore}, #{orderCount}, #{workStatus}, #{auditStatus}, #{balance})
+        INSERT INTO ums_staff (user_id, real_name, id_card, health_cert_url, service_score, order_count, work_status, audit_status, auto_accept, balance)
+        VALUES (#{userId}, #{realName}, #{idCard}, #{healthCertUrl}, #{serviceScore}, #{orderCount}, #{workStatus}, #{auditStatus}, #{autoAccept}, #{balance})
     </insert>
 
     <select id="selectById" resultMap="BaseResultMap">
-        SELECT id, user_id, real_name, id_card, health_cert_url, service_score, order_count, work_status, audit_status, balance
+        SELECT id, user_id, real_name, id_card, health_cert_url, service_score, order_count, work_status, audit_status, auto_accept, balance
         FROM ums_staff
         WHERE id = #{id}
     </select>
 
     <select id="selectByUserId" resultMap="BaseResultMap">
-        SELECT id, user_id, real_name, id_card, health_cert_url, service_score, order_count, work_status, audit_status, balance
+        SELECT id, user_id, real_name, id_card, health_cert_url, service_score, order_count, work_status, audit_status, auto_accept, balance
         FROM ums_staff
         WHERE user_id = #{userId}
     </select>
@@ -37,4 +38,16 @@
         SET balance = #{balance}
         WHERE id = #{id}
     </update>
+
+    <update id="updateAutoAccept">
+        UPDATE ums_staff SET auto_accept = #{autoAccept} WHERE id = #{id}
+    </update>
+
+    <select id="selectAutoAcceptCandidates" resultMap="BaseResultMap">
+        SELECT id, user_id, real_name, id_card, health_cert_url, service_score, order_count, work_status, audit_status, auto_accept, balance
+        FROM ums_staff
+        WHERE audit_status = 1 AND work_status = 1 AND auto_accept = 1
+        ORDER BY service_score DESC, order_count ASC
+        LIMIT #{limit}
+    </select>
 </mapper>

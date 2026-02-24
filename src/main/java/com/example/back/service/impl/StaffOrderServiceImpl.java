@@ -193,6 +193,12 @@ public class StaffOrderServiceImpl implements StaffOrderService {
         omsOrderStatusLogMapper.insert(log);
     }
 
+    @Override
+    public void updateAutoAccept(Long staffUserId, boolean enable) {
+        UmsStaff staff = requireStaff(staffUserId);
+        umsStaffMapper.updateAutoAccept(staff.getId(), enable ? 1 : 0);
+    }
+
     private UmsStaff requireStaff(Long staffUserId) {
         if (staffUserId == null) {
             throw new IllegalArgumentException("请先登录");
