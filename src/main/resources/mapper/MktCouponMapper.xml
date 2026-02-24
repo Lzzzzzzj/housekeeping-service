@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.back.mapper.MktCouponMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.back.entity.mkt.MktCoupon">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="coupon_type" property="couponType"/>
+        <result column="amount" property="amount"/>
+        <result column="min_amount" property="minAmount"/>
+        <result column="price" property="price"/>
+        <result column="total_count" property="totalCount"/>
+        <result column="receive_limit" property="receiveLimit"/>
+        <result column="obtain_channel" property="obtainChannel"/>
+        <result column="status" property="status"/>
+        <result column="receive_start_time" property="receiveStartTime"/>
+        <result column="receive_end_time" property="receiveEndTime"/>
+        <result column="use_start_time" property="useStartTime"/>
+        <result column="use_end_time" property="useEndTime"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO mkt_coupon (name, coupon_type, amount, min_amount, price,
+                                total_count, receive_limit, obtain_channel, status,
+                                receive_start_time, receive_end_time, use_start_time, use_end_time, remark)
+        VALUES (#{name}, #{couponType}, #{amount}, #{minAmount}, #{price},
+                #{totalCount}, #{receiveLimit}, #{obtainChannel}, #{status},
+                #{receiveStartTime}, #{receiveEndTime}, #{useStartTime}, #{useEndTime}, #{remark})
+    </insert>
+
+    <update id="update">
+        UPDATE mkt_coupon
+        SET name = #{name},
+            coupon_type = #{couponType},
+            amount = #{amount},
+            min_amount = #{minAmount},
+            price = #{price},
+            total_count = #{totalCount},
+            receive_limit = #{receiveLimit},
+            obtain_channel = #{obtainChannel},
+            status = #{status},
+            receive_start_time = #{receiveStartTime},
+            receive_end_time = #{receiveEndTime},
+            use_start_time = #{useStartTime},
+            use_end_time = #{useEndTime},
+            remark = #{remark}
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT *
+        FROM mkt_coupon
+        WHERE id = #{id}
+    </select>
+
+    <!-- 优惠券中心：当前时间在领取时间窗口内且已上架 -->
+    <select id="selectAvailableForCenter" resultMap="BaseResultMap">
+        SELECT *
+        FROM mkt_coupon
+        WHERE status = 1
+          AND (receive_start_time IS NULL OR receive_start_time &lt;= NOW())
+          AND (receive_end_time IS NULL OR receive_end_time &gt;= NOW())
+    </select>
+
+    <select id="pageQuery" resultMap="BaseResultMap">
+        SELECT *
+        FROM mkt_coupon
+        <where>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+        </where>
+        ORDER BY id DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+</mapper>
+

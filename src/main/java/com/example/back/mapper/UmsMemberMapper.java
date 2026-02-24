@@ -12,4 +12,7 @@ public interface UmsMemberMapper {
     UmsMember selectById(@Param("id") Long id);
 
     UmsMember selectByUserId(@Param("userId") Long userId);
+
+    int updateBalance(@Param("id") Long id,
+                      @Param("balance") java.math.BigDecimal balance);
 }

@@ -10,24 +10,25 @@
         <result column="unit" property="unit"/>
         <result column="deposit_type" property="depositType"/>
         <result column="description" property="description"/>
+        <result column="allow_coupon" property="allowCoupon"/>
     </resultMap>
 
     <select id="selectById" resultMap="BaseResultMap">
-        SELECT id, category_id, title, base_price, unit, deposit_type, description
+        SELECT id, category_id, title, base_price, unit, deposit_type, description, allow_coupon
         FROM pms_service
         WHERE id = #{id}
     </select>
 
     <select id="selectByCategoryId" resultMap="BaseResultMap">
-        SELECT id, category_id, title, base_price, unit, deposit_type, description
+        SELECT id, category_id, title, base_price, unit, deposit_type, description, allow_coupon
         FROM pms_service
         WHERE category_id = #{categoryId}
         ORDER BY id
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO pms_service (category_id, title, base_price, unit, deposit_type, description)
-        VALUES (#{categoryId}, #{title}, #{basePrice}, #{unit}, #{depositType}, #{description})
+        INSERT INTO pms_service (category_id, title, base_price, unit, deposit_type, description, allow_coupon)
+        VALUES (#{categoryId}, #{title}, #{basePrice}, #{unit}, #{depositType}, #{description}, #{allowCoupon})
     </insert>
 
     <update id="update">
@@ -37,7 +38,8 @@
             base_price = #{basePrice},
             unit = #{unit},
             deposit_type = #{depositType},
-            description = #{description}
+            description = #{description},
+            allow_coupon = #{allowCoupon}
         WHERE id = #{id}
     </update>
 
@@ -46,7 +48,7 @@
     </delete>
 
     <select id="pageQuery" resultMap="BaseResultMap">
-        SELECT id, category_id, title, base_price, unit, deposit_type, description
+        SELECT id, category_id, title, base_price, unit, deposit_type, description, allow_coupon
         FROM pms_service
         <where>
             <if test="categoryId != null">

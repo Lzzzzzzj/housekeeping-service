@@ -22,4 +22,9 @@ public class OrderCreateDTO {
 
     /** 动态表单数据 (如几房几厅、有无电梯等) */
     private Map<String, Object> extInfo;
+
+    /**
+     * 用户优惠券ID，可为空；一单仅可使用一张券
+     */
+    private Long userCouponId;
 }

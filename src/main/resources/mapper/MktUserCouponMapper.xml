@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.back.mapper.MktUserCouponMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.back.entity.mkt.MktUserCoupon">
+        <id column="id" property="id"/>
+        <result column="coupon_id" property="couponId"/>
+        <result column="member_id" property="memberId"/>
+        <result column="status" property="status"/>
+        <result column="obtain_type" property="obtainType"/>
+        <result column="obtain_time" property="obtainTime"/>
+        <result column="use_time" property="useTime"/>
+        <result column="order_id" property="orderId"/>
+        <result column="expire_time" property="expireTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO mkt_user_coupon (coupon_id, member_id, status, obtain_type, obtain_time, use_time, order_id, expire_time)
+        VALUES (#{couponId}, #{memberId}, #{status}, #{obtainType}, #{obtainTime}, #{useTime}, #{orderId}, #{expireTime})
+    </insert>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT *
+        FROM mkt_user_coupon
+        WHERE id = #{id}
+    </select>
+
+    <select id="countByMemberAndCoupon" resultType="int">
+        SELECT COUNT(*)
+        FROM mkt_user_coupon
+        WHERE member_id = #{memberId}
+          AND coupon_id = #{couponId}
+    </select>
+
+    <select id="selectByMember" resultMap="BaseResultMap">
+        SELECT *
+        FROM mkt_user_coupon
+        WHERE member_id = #{memberId}
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        ORDER BY obtain_time DESC
+    </select>
+
+</mapper>
+

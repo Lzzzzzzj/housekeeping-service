@@ -185,7 +185,7 @@
 | **路径** | `POST /api/v1/user/order/create` |
 | **请求体** | OrderCreateDTO |
 
-**输入示例（正常）**：
+**输入示例（正常，未使用优惠券）**：
 ```json
 {
   "serviceId": 1,
@@ -201,7 +201,29 @@
     "rooms": 3,
     "halls": 2,
     "hasElevator": true
-  }
+  },
+  "userCouponId": null
+}
+```
+
+**输入示例（正常，使用优惠券）**：
+```json
+{
+  "serviceId": 1,
+  "appointmentTime": "2025-03-01T14:00:00",
+  "addressInfo": {
+    "name": "张三",
+    "phone": "13800138000",
+    "lng": 113.123,
+    "lat": 23.456,
+    "address": "广东省广州市天河区某某路1号"
+  },
+  "extInfo": {
+    "rooms": 3,
+    "halls": 2,
+    "hasElevator": true
+  },
+  "userCouponId": 1001
 }
 ```
 
@@ -219,11 +241,14 @@
     "staffId": null,
     "serviceId": 1,
     "totalAmount": 80.00,
-    "payAmount": 80.00,
+      "payAmount": 70.00,
     "status": 10,
     "appointmentTime": "2025-03-01T14:00:00",
-    "addressInfo": "{...}",
-    "extInfo": "{...}",
+      "addressInfo": "{...}",
+      "extInfo": "{...}",
+      "couponId": 1,
+      "userCouponId": 1001,
+      "couponAmount": 10.00,
     "createTime": "2025-02-24T10:00:00",
     "serviceTitle": "日常保洁"
   }
@@ -238,6 +263,194 @@
 | `serviceId` 为空 | code 500，msg 含「服务ID不能为空」 |
 | `appointmentTime` 为过去时间 | code 500，msg 含「预约时间必须为未来时间」 |
 | `addressInfo` 为空 | code 500，msg 含「地址信息不能为空」 |
+| `userCouponId` 不属于当前用户 / 已使用 / 已过期 | code 500，msg 含「优惠券不可用」或类似提示 |
+
+---
+
+### 1.6 优惠券（需用户登录）
+
+> 说明：优惠券由管理员在后台上架，用户可以通过余额购买或兑换码领取。
+
+#### 1.6.1 我的优惠券列表
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `GET /api/v1/user/coupon/my` |
+| **Query** | status(可选)：0-未使用，1-已使用，2-已过期，默认返回全部 |
+
+**输入示例**：
+- `GET /api/v1/user/coupon/my`
+- `GET /api/v1/user/coupon/my?status=0`
+
+**预期输出（成功）**：
+- HTTP 200，`code`: 200  
+- `data`: UserCouponVO 数组
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": [
+    {
+      "id": 1001,
+      "couponId": 1,
+      "memberId": 1,
+      "status": 0,
+      "obtainType": 1,
+      "obtainTime": "2025-02-24T10:00:00",
+      "useTime": null,
+      "expireTime": "2025-03-01T23:59:59",
+      "couponName": "新用户立减10元",
+      "couponType": 1,
+      "amount": 10.00,
+      "minAmount": 0.00
+    }
+  ]
+}
+```
+
+**异常用例**：未登录返回 401 或 code 500，提示「请登录」。
+
+---
+
+#### 1.6.2 优惠券列表（优惠券中心，可购买/可兑换）
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `GET /api/v1/user/coupon/center` |
+| **Query** | 无必填参数，可根据需要扩展分页参数 |
+
+**输入示例**：
+- `GET /api/v1/user/coupon/center`
+
+**预期输出（成功）**：
+- HTTP 200，`code`: 200  
+- `data`: CouponVO 数组（只返回当前时间在领取时间窗口内且已上架的优惠券）
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": [
+    {
+      "id": 1,
+      "name": "新用户立减10元",
+      "couponType": 1,
+      "amount": 10.00,
+      "minAmount": 0.00,
+      "price": 1.00,
+      "totalCount": 1000,
+      "receiveLimit": 1,
+      "obtainChannel": 0,
+      "status": 1,
+      "receiveStartTime": "2025-02-20T00:00:00",
+      "receiveEndTime": "2025-03-01T23:59:59"
+    }
+  ]
+}
+```
+
+---
+
+#### 1.6.3 余额购买优惠券
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `POST /api/v1/user/coupon/buy` |
+| **请求体** | CouponBuyDTO |
+
+**输入示例（正常）**：
+```json
+{
+  "couponId": 1
+}
+```
+
+业务规则（用于测试断言）：
+- 校验优惠券存在且 `status=1`、当前时间在 `receiveStartTime`~`receiveEndTime` 之间；
+- 校验优惠券 `price > 0` 且 `obtainChannel` 允许余额购买；
+- 校验用户余额是否足够；
+- 校验用户已领取数量未超过 `receiveLimit`；
+- 扣减用户余额，写入 `mkt_user_coupon` 一条记录，返回新的用户优惠券 ID。
+
+**预期输出（成功）**：
+- HTTP 200，`code`: 200  
+- `data`: UserCouponVO（或至少返回 `userCouponId`）
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "id": 1001,
+    "couponId": 1,
+    "memberId": 1,
+    "status": 0,
+    "obtainType": 1,
+    "obtainTime": "2025-02-24T10:00:00",
+    "expireTime": "2025-03-01T23:59:59"
+  }
+}
+```
+
+**异常用例**：
+
+| 场景 | 预期输出 |
+|------|----------|
+| 未登录 | code 401 或 500，提示「请登录」 |
+| 优惠券不存在或已下架 | code 500，msg 含「优惠券不存在或已下架」 |
+| 不在领取时间范围内 | code 500，msg 含「当前不在领取时间内」 |
+| 优惠券配置为仅兑换码 (`obtainChannel=2`) | code 500，msg 含「不可通过余额购买」 |
+| 用户余额不足 | code 500，msg 含「余额不足」 |
+| 超过单用户领取上限 | code 500，msg 含「领取数量已达上限」 |
+
+---
+
+#### 1.6.4 兑换码领取优惠券
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `POST /api/v1/user/coupon/redeem` |
+| **请求体** | CouponRedeemDTO |
+
+**输入示例（正常）**：
+```json
+{
+  "code": "ABC123XYZ"
+}
+```
+
+业务规则（用于测试断言）：
+- 校验兑换码存在且未过期、未使用；
+- 关联的优惠券存在且为上架状态，且 `obtainChannel` 允许兑换码领取；
+- 同一用户重复使用同一兑换码（或同模板多次）按业务要求限制；
+- 将兑换码标记为已使用，绑定当前用户，在 `mkt_user_coupon` 中插入记录。
+
+**预期输出（成功）**：
+- HTTP 200，`code`: 200  
+- `data`: UserCouponVO
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "id": 1002,
+    "couponId": 2,
+    "memberId": 1,
+    "status": 0,
+    "obtainType": 2,
+    "obtainTime": "2025-02-24T10:05:00",
+    "expireTime": "2025-03-15T23:59:59"
+  }
+}
+```
+
+**异常用例**：
+
+| 场景 | 预期输出 |
+|------|----------|
+| 未登录 | code 401 或 500，提示「请登录」 |
+| 兑换码不存在 | code 500，msg 含「兑换码无效」 |
+| 兑换码已使用 | code 500，msg 含「兑换码已被使用」 |
+| 兑换码已过期 | code 500，msg 含「兑换码已过期」 |
+| 对应优惠券已下架或不支持兑换码领取 | code 500，msg 含「优惠券不可用」 |
 
 ---
 
@@ -634,6 +847,107 @@ depositType：0-全额支付，1-只付定金，2-线下报价。
 
 ---
 
+### 3.3 优惠券管理（管理员）
+
+**基础路径**：`/api/v1/admin/coupon`
+
+> 说明：仅管理员可调用，用于在后台上架/下架优惠券模板，配置立减/满减规则和价格。
+
+#### 3.3.1 创建优惠券
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `POST /api/v1/admin/coupon/create` |
+| **请求体** | CouponSaveDTO |
+
+**输入示例（立减券，可余额购买也可兑换码领取）**：
+```json
+{
+  "name": "新用户立减10元",
+  "couponType": 1,
+  "amount": 10.00,
+  "minAmount": 0.00,
+  "price": 1.00,
+  "totalCount": 1000,
+  "receiveLimit": 1,
+  "obtainChannel": 0,
+  "receiveStartTime": "2025-02-20T00:00:00",
+  "receiveEndTime": "2025-03-01T23:59:59",
+  "useStartTime": "2025-02-20T00:00:00",
+  "useEndTime": "2025-03-10T23:59:59",
+  "remark": "新用户专享"
+}
+```
+
+**输入示例（满减券，仅兑换码领取）**：
+```json
+{
+  "name": "满100减20",
+  "couponType": 2,
+  "amount": 20.00,
+  "minAmount": 100.00,
+  "price": 0.00,
+  "totalCount": 0,
+  "receiveLimit": 0,
+  "obtainChannel": 2,
+  "receiveStartTime": "2025-02-20T00:00:00",
+  "receiveEndTime": "2025-03-31T23:59:59",
+  "useStartTime": "2025-02-20T00:00:00",
+  "useEndTime": "2025-04-30T23:59:59"
+}
+```
+
+**预期输出（成功）**：HTTP 200，`code`: 200，`data`: null
+
+**异常用例**：非管理员调用、字段缺失或金额配置非法（如满减券 `minAmount` 小于 `amount`）等返回 code 500。
+
+---
+
+#### 3.3.2 修改优惠券
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `PUT /api/v1/admin/coupon/{id}` |
+| **路径参数** | id：优惠券ID |
+| **请求体** | CouponSaveDTO（同创建） |
+
+**预期输出（成功）**：HTTP 200，`code`: 200，`data`: null
+
+---
+
+#### 3.3.3 上架/下架优惠券
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `PUT /api/v1/admin/coupon/{id}/status` |
+| **请求体** | CouponStatusDTO |
+
+**输入示例**：
+```json
+{
+  "status": 1
+}
+```
+
+**预期输出（成功）**：HTTP 200，`code`: 200，`data`: null
+
+---
+
+#### 3.3.4 分页查询优惠券列表
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `GET /api/v1/admin/coupon/page` |
+| **Query** | status(可选), name(可选), page(默认1), pageSize(默认20) |
+
+**输入示例**：
+- `GET /api/v1/admin/coupon/page`
+- `GET /api/v1/admin/coupon/page?status=1&page=1&pageSize=10`
+
+**预期输出（成功）**：
+- HTTP 200，`code`: 200  
+- `data`: CouponVO 数组
+
 ### 3.3 服务人员申请审核（管理员）
 
 #### 3.3.1 申请列表
@@ -823,6 +1137,14 @@ depositType：0-全额支付，1-只付定金，2-线下报价。
 | 管理员-服务 | DELETE | /api/v1/admin/service/{id} | 删除服务 |
 | 管理员-服务 | GET | /api/v1/admin/service/{id} | 服务详情 |
 | 管理员-服务 | GET | /api/v1/admin/service/page | 服务分页 |
+| 管理员-优惠券 | POST | /api/v1/admin/coupon/create | 创建优惠券 |
+| 管理员-优惠券 | PUT | /api/v1/admin/coupon/{id} | 更新优惠券 |
+| 管理员-优惠券 | PUT | /api/v1/admin/coupon/{id}/status | 上架/下架优惠券 |
+| 管理员-优惠券 | GET | /api/v1/admin/coupon/page | 优惠券分页 |
+| 用户-优惠券 | GET | /api/v1/user/coupon/my | 我的优惠券列表 |
+| 用户-优惠券 | GET | /api/v1/user/coupon/center | 优惠券中心列表 |
+| 用户-优惠券 | POST | /api/v1/user/coupon/buy | 余额购买优惠券 |
+| 用户-优惠券 | POST | /api/v1/user/coupon/redeem | 兑换码领取优惠券 |
 | 管理员-申请 | GET | /api/v1/admin/staff/apply/list | 申请列表 |
 | 管理员-申请 | PUT | /api/v1/admin/staff/apply/audit | 审核申请 |
 | 管理员-结算 | GET | /api/v1/admin/settle/config | 结算配置查询 |

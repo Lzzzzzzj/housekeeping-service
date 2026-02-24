@@ -26,4 +26,10 @@
         WHERE user_id = #{userId}
     </select>
 
+    <update id="updateBalance">
+        UPDATE ums_member
+        SET balance = #{balance}
+        WHERE id = #{id}
+    </update>
+
 </mapper>

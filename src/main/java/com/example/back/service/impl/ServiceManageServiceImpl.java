@@ -22,6 +22,9 @@ public class ServiceManageServiceImpl implements ServiceManageService {
     public void create(ServiceSaveDTO dto) {
         PmsService service = new PmsService();
         BeanUtils.copyProperties(dto, service);
+        if (service.getAllowCoupon() == null) {
+            service.setAllowCoupon(1);
+        }
         pmsServiceMapper.insert(service);
     }
 
@@ -34,6 +37,9 @@ public class ServiceManageServiceImpl implements ServiceManageService {
         }
         BeanUtils.copyProperties(dto, exist);
         exist.setId(id);
+        if (exist.getAllowCoupon() == null) {
+            exist.setAllowCoupon(1);
+        }
         pmsServiceMapper.update(exist);
     }
 

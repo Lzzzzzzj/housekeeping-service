@@ -18,6 +18,18 @@ public class OmsOrder {
     private Long serviceId;
     private BigDecimal totalAmount;
     private BigDecimal payAmount;
+    /**
+     * 使用的优惠券模板ID
+     */
+    private Long couponId;
+    /**
+     * 使用的用户优惠券ID
+     */
+    private Long userCouponId;
+    /**
+     * 本单优惠金额快照
+     */
+    private BigDecimal couponAmount;
     private Integer status;
     private LocalDateTime appointmentTime;
     private String addressInfo;   // JSON 地址快照

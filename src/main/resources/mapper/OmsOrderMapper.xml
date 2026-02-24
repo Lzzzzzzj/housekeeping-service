@@ -10,6 +10,9 @@
         <result column="service_id" property="serviceId"/>
         <result column="total_amount" property="totalAmount"/>
         <result column="pay_amount" property="payAmount"/>
+        <result column="coupon_id" property="couponId"/>
+        <result column="user_coupon_id" property="userCouponId"/>
+        <result column="coupon_amount" property="couponAmount"/>
         <result column="status" property="status"/>
         <result column="appointment_time" property="appointmentTime"/>
         <result column="address_info" property="addressInfo"/>
@@ -22,14 +25,19 @@
     </resultMap>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO oms_order (order_sn, member_id, staff_id, service_id, total_amount, pay_amount, status,
-                              appointment_time, address_info, ext_info, platform_amount, staff_amount, settle_time)
-        VALUES (#{orderSn}, #{memberId}, #{staffId}, #{serviceId}, #{totalAmount}, #{payAmount}, #{status},
-                #{appointmentTime}, #{addressInfo}, #{extInfo}, #{platformAmount}, #{staffAmount}, #{settleTime})
+        INSERT INTO oms_order (order_sn, member_id, staff_id, service_id,
+                               total_amount, pay_amount, coupon_id, user_coupon_id, coupon_amount,
+                               status, appointment_time, address_info, ext_info,
+                               platform_amount, staff_amount, settle_time)
+        VALUES (#{orderSn}, #{memberId}, #{staffId}, #{serviceId},
+                #{totalAmount}, #{payAmount}, #{couponId}, #{userCouponId}, #{couponAmount},
+                #{status}, #{appointmentTime}, #{addressInfo}, #{extInfo},
+                #{platformAmount}, #{staffAmount}, #{settleTime})
     </insert>
 
     <select id="selectById" resultMap="BaseResultMap">
         SELECT o.id, o.order_sn, o.member_id, o.staff_id, o.service_id, o.total_amount, o.pay_amount,
+               o.coupon_id, o.user_coupon_id, o.coupon_amount,
                o.status, o.appointment_time, o.address_info, o.ext_info,
                o.platform_amount, o.staff_amount, o.settle_time, o.create_time,
                s.title AS service_title
@@ -40,6 +48,7 @@
 
     <select id="selectByOrderSn" resultMap="BaseResultMap">
         SELECT o.id, o.order_sn, o.member_id, o.staff_id, o.service_id, o.total_amount, o.pay_amount,
+               o.coupon_id, o.user_coupon_id, o.coupon_amount,
                o.status, o.appointment_time, o.address_info, o.ext_info,
                o.platform_amount, o.staff_amount, o.settle_time, o.create_time,
                s.title AS service_title
@@ -50,6 +59,7 @@
 
     <select id="selectByMemberId" resultMap="BaseResultMap">
         SELECT o.id, o.order_sn, o.member_id, o.staff_id, o.service_id, o.total_amount, o.pay_amount,
+               o.coupon_id, o.user_coupon_id, o.coupon_amount,
                o.status, o.appointment_time, o.address_info, o.ext_info,
                o.platform_amount, o.staff_amount, o.settle_time, o.create_time,
                s.title AS service_title
@@ -88,6 +98,7 @@
     <!-- 抢单池/待接订单列表：当前所有待接单且尚未被任何服务人员接单 -->
     <select id="selectGrabPool" resultMap="BaseResultMap">
         SELECT o.id, o.order_sn, o.member_id, o.staff_id, o.service_id, o.total_amount, o.pay_amount,
+               o.coupon_id, o.user_coupon_id, o.coupon_amount,
                o.status, o.appointment_time, o.address_info, o.ext_info,
                o.platform_amount, o.staff_amount, o.settle_time, o.create_time,
                s.title AS service_title

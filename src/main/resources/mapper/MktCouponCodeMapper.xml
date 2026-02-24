@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.back.mapper.MktCouponCodeMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.back.entity.mkt.MktCouponCode">
+        <id column="id" property="id"/>
+        <result column="coupon_id" property="couponId"/>
+        <result column="code" property="code"/>
+        <result column="bound_member_id" property="boundMemberId"/>
+        <result column="used" property="used"/>
+        <result column="used_time" property="usedTime"/>
+        <result column="expire_time" property="expireTime"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <select id="selectByCode" resultMap="BaseResultMap">
+        SELECT *
+        FROM mkt_coupon_code
+        WHERE code = #{code}
+    </select>
+
+    <update id="markUsed">
+        UPDATE mkt_coupon_code
+        SET used = 1,
+            used_time = NOW(),
+            bound_member_id = #{boundMemberId}
+        WHERE id = #{id}
+          AND used = 0
+    </update>
+
+</mapper>
+

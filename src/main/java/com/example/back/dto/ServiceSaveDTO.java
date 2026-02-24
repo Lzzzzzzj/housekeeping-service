@@ -33,5 +33,10 @@ public class ServiceSaveDTO {
     private Integer depositType;
 
     private String description;
+
+    /**
+     * 是否参与优惠券活动: 1-参与, 0-不参与；默认参与
+     */
+    private Integer allowCoupon;
 }
 
