@@ -456,7 +456,7 @@
 
 ---
 
-#### 1.4.2 发起支付（预支付单）
+#### 1.4.2 使用余额支付订单
 
 | 项目 | 说明 |
 |------|------|
@@ -472,22 +472,19 @@
 
 **预期输出（成功）**：
 - HTTP 200，`code`: 200
-- `data`: OrderPayVO（微信支付预支付参数，具体以对接为准）
-```json
-{
-  "code": 200,
-  "msg": "success",
-  "data": {
-    "orderSn": "ORD202502240001",
-    "prepayId": "...",
-    "paySign": "...",
-    "timeStamp": "...",
-    "nonceStr": "..."
-  }
-}
-```
+- `data`: null（余额足够且扣减成功）
 
-**异常用例**：`orderSn` 为空则 code 500；订单非当前用户或状态不允许支付则业务错误。
+**业务说明**：
+- 后端根据 `orderSn` 查找订单，校验订单属于当前用户且状态为待支付；
+- 读取用户余额 `ums_member.balance`，若余额 ≥ 订单应付金额 `payAmount`，则扣减余额并视为支付成功；
+- 若订单 `payAmount` 为 0（例如优惠券全额抵扣），则直接视为已支付；
+- 支付成功后自动调用内部的“支付成功确认”逻辑，将订单状态置为待接单并加入抢单池，触发自动派单。
+
+**异常用例**：
+- `orderSn` 为空：code 500，校验错误；
+- 订单不存在或不属于当前用户：code 500，msg 含「订单不存在」或「无权操作该订单」；
+- 订单状态不为待支付：code 500，msg 含「订单状态不允许支付」；
+- 用户余额不足：code 500，msg 含「余额不足」。
 
 ---
 
@@ -635,6 +632,113 @@
   }
 }
 ```
+
+---
+
+### 1.7 钱包与余额充值（需用户登录）
+
+#### 1.7.1 发起余额充值（微信预下单）
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `POST /api/v1/user/wallet/recharge/create` |
+| **请求参数** | Query / Form：`amount`（充值金额，必须 > 0） |
+
+**输入示例（正常）**：
+- `POST /api/v1/user/wallet/recharge/create?amount=100.00`
+
+**预期输出（成功）**：
+- HTTP 200，`code`: 200
+- `data`: OrderPayVO（用于前端调起微信支付）
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "orderSn": "RC202502240001",
+    "prepayId": "...",
+    "paySign": "...",
+    "timeStamp": "...",
+    "nonceStr": "..."
+  }
+}
+```
+
+**业务说明**：
+- 后端生成一条充值记录 `ums_member_recharge`，状态为「待支付」；
+- 调用微信支付 SDK 创建预支付单（当前实现为占位），保存 `wechat_prepay_id` 等信息；
+- 返回预支付参数给前端，前端使用小程序支付组件完成实际支付。
+
+**异常用例**：
+- 未登录：code 401 或 500，提示「请登录」；
+- `amount` 缺失或 ≤ 0：code 500，msg 含「充值金额必须大于0」。
+
+---
+
+#### 1.7.2 充值支付成功回调（业务入口）
+
+> 说明：实际生产环境中，微信支付回调通常由网关层或统一回调 Controller 接收并做签名验证，
+> 本接口仅作为**业务落库入口**，在签名验证通过后调用。
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `POST /api/v1/user/wallet/recharge/notify` |
+| **请求参数** | rechargeSn（充值单号）、transactionId（微信支付订单号） |
+
+**输入示例**：
+- `POST /api/v1/user/wallet/recharge/notify?rechargeSn=RC202502240001&transactionId=4200002222...`
+
+**预期输出（成功）**：
+- HTTP 200，`code`: 200，`data`: null
+
+**业务说明**：
+- 根据 `rechargeSn` 查询 `ums_member_recharge`，若不存在则报错；
+- 若记录已为「支付成功」则认为是重复回调，直接返回成功（幂等）；
+- 将充值记录状态更新为「支付成功」，写入 `wechat_transaction_id` 与回调时间；
+- 将充值金额累加到用户余额 `ums_member.balance` 中，完成实际入账。
+
+**异常用例**：
+- `rechargeSn` 无效：code 500，msg 含「充值单不存在」；
+- 数据库更新影响行数为 0（例如状态已被其他回调更新）：按实现直接返回成功或记录告警。
+
+---
+
+#### 1.7.3 查询余额充值记录
+
+| 项目 | 说明 |
+|------|------|
+| **路径** | `GET /api/v1/user/wallet/recharge/list` |
+| **请求参数** | 无必填参数（根据当前登录用户查询，可按需扩展分页） |
+
+**输入示例**：
+- `GET /api/v1/user/wallet/recharge/list`
+
+**预期输出（成功）**：
+- HTTP 200，`code`: 200
+- `data`: UmsMemberRecharge 数组（按时间倒序）
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "data": [
+    {
+      "id": 1,
+      "memberId": 1,
+      "rechargeSn": "RC202502240001",
+      "amount": 100.00,
+      "payChannel": 1,
+      "payStatus": 1,
+      "wechatPrepayId": "...",
+      "wechatTransactionId": "4200002222...",
+      "notifyTime": "2025-02-24T10:05:00",
+      "createTime": "2025-02-24T10:00:00"
+    }
+  ]
+}
+```
+
+**异常用例**：
+- 未登录：code 401 或 500，提示「请登录」。
 
 ---
 
@@ -1267,7 +1371,7 @@ depositType：0-全额支付，1-只付定金，2-线下报价。
 | 用户-类目 | GET | /api/v1/user/category/list | 类目树 |
 | 用户-服务 | GET | /api/v1/user/service/page | 服务分页 |
 | 用户-订单 | POST | /api/v1/user/order/create | 创建订单 |
-| 用户-订单 | POST | /api/v1/user/order/pay | 发起支付 |
+| 用户-订单 | POST | /api/v1/user/order/pay | 使用余额支付订单 |
 | 用户-订单 | POST | /api/v1/user/order/pay-success | 支付成功确认 |
 | 用户-订单 | GET | /api/v1/user/order/list | 订单列表 |
 | 用户-订单 | POST | /api/v1/user/order/cancel | 取消订单 |
@@ -1300,6 +1404,9 @@ depositType：0-全额支付，1-只付定金，2-线下报价。
 | 用户-优惠券 | GET | /api/v1/user/coupon/center | 优惠券中心列表 |
 | 用户-优惠券 | POST | /api/v1/user/coupon/buy | 余额购买优惠券 |
 | 用户-优惠券 | POST | /api/v1/user/coupon/redeem | 兑换码领取优惠券 |
+| 用户-钱包 | POST | /api/v1/user/wallet/recharge/create | 发起余额充值（微信预下单） |
+| 用户-钱包 | POST | /api/v1/user/wallet/recharge/notify | 充值支付成功回调（业务入口） |
+| 用户-钱包 | GET | /api/v1/user/wallet/recharge/list | 查询余额充值记录 |
 | 管理员-申请 | GET | /api/v1/admin/staff/apply/list | 申请列表 |
 | 管理员-申请 | PUT | /api/v1/admin/staff/apply/audit | 审核申请 |
 | 管理员-结算 | GET | /api/v1/admin/settle/config | 结算配置查询 |

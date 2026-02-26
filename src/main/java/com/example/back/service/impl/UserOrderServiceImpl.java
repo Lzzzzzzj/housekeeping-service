@@ -2,7 +2,6 @@ package com.example.back.service.impl;
 
 import com.example.back.common.constant.OrderStatus;
 import com.example.back.dto.OrderCreateDTO;
-import com.example.back.dto.OrderPayVO;
 import com.example.back.entity.mkt.MktCoupon;
 import com.example.back.entity.mkt.MktUserCoupon;
 import com.example.back.entity.oms.OmsOrder;
@@ -142,6 +141,9 @@ public class UserOrderServiceImpl implements UserOrderService {
         order.setAppointmentTime(dto.getAppointmentTime());
         order.setAddressInfo(addressJson);
         order.setExtInfo(extJson);
+        // 下单时分润尚未结算，先初始化为 0，避免数据库非空约束报错
+        order.setPlatformAmount(BigDecimal.ZERO);
+        order.setStaffAmount(BigDecimal.ZERO);
 
         omsOrderMapper.insert(order);
 
@@ -165,7 +167,8 @@ public class UserOrderServiceImpl implements UserOrderService {
     }
 
     @Override
-    public OrderPayVO pay(Long memberId, String orderSn) {
+    @Transactional
+    public void pay(Long memberId, String orderSn) {
         OmsOrder order = omsOrderMapper.selectByOrderSn(orderSn);
         if (order == null) {
             throw new IllegalArgumentException("订单不存在");
@@ -177,14 +180,27 @@ public class UserOrderServiceImpl implements UserOrderService {
             throw new IllegalArgumentException("订单状态不允许支付");
         }
 
-        // TODO: 调用微信支付 SDK 生成预支付单
-        OrderPayVO vo = new OrderPayVO();
-        vo.setOrderSn(orderSn);
-        vo.setPrepayId("prepay_placeholder");
-        vo.setPaySign("placeholder");
-        vo.setTimeStamp(String.valueOf(System.currentTimeMillis() / 1000));
-        vo.setNonceStr(UUID.randomUUID().toString().replace("-", ""));
-        return vo;
+        // 0 元订单（例如优惠券全额抵扣）直接视为已支付
+        BigDecimal payAmount = order.getPayAmount() != null ? order.getPayAmount() : BigDecimal.ZERO;
+        if (payAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            confirmPaySuccess(memberId, orderSn);
+            return;
+        }
+
+        // 校验并扣减用户余额
+        var member = umsMemberMapper.selectById(order.getMemberId());
+        if (member == null) {
+            throw new IllegalArgumentException("用户不存在");
+        }
+        BigDecimal balance = member.getBalance() != null ? member.getBalance() : BigDecimal.ZERO;
+        if (balance.compareTo(payAmount) < 0) {
+            throw new IllegalArgumentException("余额不足");
+        }
+        BigDecimal newBalance = balance.subtract(payAmount);
+        umsMemberMapper.updateBalance(member.getId(), newBalance);
+
+        // 扣款成功后，走统一的“支付成功”流程：订单入待接单池并触发自动派单
+        confirmPaySuccess(memberId, orderSn);
     }
 
     @Override

@@ -29,13 +29,13 @@ public class UserOrderController {
     }
 
     /**
-     * 发起微信支付
+     * 使用余额支付订单
      */
     @PostMapping("/order/pay")
-    public Result<OrderPayVO> pay(@Valid @RequestBody OrderPayDTO dto) {
+    public Result<Void> pay(@Valid @RequestBody OrderPayDTO dto) {
         Long memberId = requireMemberId();
-        OrderPayVO vo = userOrderService.pay(memberId, dto.getOrderSn());
-        return Result.success(vo);
+        userOrderService.pay(memberId, dto.getOrderSn());
+        return Result.success();
     }
 
     /**

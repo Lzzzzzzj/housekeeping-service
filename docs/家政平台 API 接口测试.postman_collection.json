@@ -1,0 +1,1677 @@
+{
+	"info": {
+		"_postman_id": "c2f20e21-d1a9-4fd7-b822-68000aa4ff2b",
+		"name": "家政平台 API 接口测试",
+		"description": "包含用户端、师傅端、管理员端所有接口的完整测试用例",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "26724298",
+		"_collection_link": "https://grey-star-912270.postman.co/workspace/contactstest~73f6233f-f65a-426e-ad6a-778fbaa8ae7a/collection/26724298-c2f20e21-d1a9-4fd7-b822-68000aa4ff2b?action=share&source=collection_link&creator=26724298"
+	},
+	"item": [
+		{
+			"name": "一、用户端接口",
+			"item": [
+				{
+					"name": "1.1 用户认证",
+					"item": [
+						{
+							"name": "用户注册",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"username\": \"zhangsan\",\n  \"password\": \"123456\",\n  \"phone\": \"13800138000\",\n  \"nickname\": \"张三\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/register",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"register"
+									]
+								},
+								"description": "用户注册接口，无需Token"
+							},
+							"response": []
+						},
+						{
+							"name": "用户登录",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"var jsonData = pm.response.json();",
+											"",
+											"if(jsonData.data && jsonData.data.token) {",
+											"    pm.collectionVariables.set(\"token\", jsonData.data.token);",
+											"    console.log(\"Token已自动保存到变量: \" + jsonData.data.token);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"usernameOrPhone\": \"zhangsan\",\n  \"password\": \"123456\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/login",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"login"
+									]
+								},
+								"description": "用户登录接口，登录成功后自动保存Token到变量"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "1.2 类目",
+					"item": [
+						{
+							"name": "获取全类目列表（树形）",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/category/list",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"category",
+										"list"
+									]
+								},
+								"description": "获取全类目列表，认证可选"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "1.3 服务",
+					"item": [
+						{
+							"name": "分页查询服务列表",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/service/page?categoryId=1&page=1&pageSize=10",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"service",
+										"page"
+									],
+									"query": [
+										{
+											"key": "categoryId",
+											"value": "1"
+										},
+										{
+											"key": "title",
+											"value": "保洁",
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "pageSize",
+											"value": "10"
+										}
+									]
+								},
+								"description": "分页查询服务列表，支持按类目或标题搜索"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "1.4 订单",
+					"item": [
+						{
+							"name": "用户提交订单",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"serviceId\": 1,\n  \"appointmentTime\": \"2026-03-01T14:00:00\",\n  \"addressInfo\": {\n    \"name\": \"张三\",\n    \"phone\": \"13800138000\",\n    \"lng\": 113.123,\n    \"lat\": 23.456,\n    \"address\": \"广东省广州市天河区某某路1号\"\n  },\n  \"extInfo\": {\n    \"rooms\": 3,\n    \"halls\": 2,\n    \"hasElevator\": true\n  },\n  \"userCouponId\": null\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/order/create",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"order",
+										"create"
+									]
+								},
+								"description": "用户提交订单，需登录"
+							},
+							"response": []
+						},
+						{
+							"name": "发起支付（预支付单）",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"orderSn\": \"ORD202502240001\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/order/pay",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"order",
+										"pay"
+									]
+								},
+								"description": "发起支付，获取预支付参数"
+							},
+							"response": []
+						},
+						{
+							"name": "支付成功确认",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"orderSn\": \"ORD202502240001\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/order/pay-success",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"order",
+										"pay-success"
+									]
+								},
+								"description": "支付成功后回调确认"
+							},
+							"response": []
+						},
+						{
+							"name": "个人订单列表",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/order/list?status=20",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"order",
+										"list"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "20",
+											"description": "10-待支付, 20-待接单, 30-待服务, 60-待结算, 70-已完成"
+										}
+									]
+								},
+								"description": "查看当前用户的订单列表"
+							},
+							"response": []
+						},
+						{
+							"name": "取消订单",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"orderId\": 1\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/order/cancel",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"order",
+										"cancel"
+									]
+								},
+								"description": "取消订单"
+							},
+							"response": []
+						},
+						{
+							"name": "用户确认订单完成",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"orderId\": 1\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/order/confirm",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"order",
+										"confirm"
+									]
+								},
+								"description": "用户手动确认订单完成"
+							},
+							"response": []
+						},
+						{
+							"name": "订单测试接口（预留）",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/order/test",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"order",
+										"test"
+									]
+								},
+								"description": "预留测试接口"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "1.5 服务人员申请",
+					"item": [
+						{
+							"name": "申请成为服务人员",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"realName\": \"李师傅\",\n  \"idCard\": \"440101199001011234\",\n  \"phone\": \"13900139000\",\n  \"healthCertUrl\": \"https://xxx/health.jpg\",\n  \"skillCertUrls\": \"[\\\"https://xxx/skill1.jpg\\\"]\",\n  \"applyReason\": \"从事家政多年\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/staff/apply",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"staff",
+										"apply"
+									]
+								},
+								"description": "用户申请成为服务人员"
+							},
+							"response": []
+						},
+						{
+							"name": "查询我的申请状态",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/staff/apply/status",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"staff",
+										"apply",
+										"status"
+									]
+								},
+								"description": "查询当前用户的服务人员申请状态"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "1.6 优惠券",
+					"item": [
+						{
+							"name": "我的优惠券列表",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/coupon/my?status=0",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"coupon",
+										"my"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "0",
+											"description": "0-未使用, 1-已使用, 2-已过期"
+										}
+									]
+								},
+								"description": "查看我的优惠券"
+							},
+							"response": []
+						},
+						{
+							"name": "优惠券中心列表",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/coupon/center",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"coupon",
+										"center"
+									]
+								},
+								"description": "查看可购买/可兑换的优惠券列表"
+							},
+							"response": []
+						},
+						{
+							"name": "余额购买优惠券",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"couponId\": 1\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/coupon/buy",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"coupon",
+										"buy"
+									]
+								},
+								"description": "使用余额购买优惠券"
+							},
+							"response": []
+						},
+						{
+							"name": "兑换码领取优惠券",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"code\": \"ABC123XYZ\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/coupon/redeem",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"coupon",
+										"redeem"
+									]
+								},
+								"description": "使用兑换码领取优惠券"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "二、师傅端接口",
+			"item": [
+				{
+					"name": "抢单池/待接订单列表",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/staff/order/pool",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff",
+								"order",
+								"pool"
+							]
+						},
+						"description": "查看可抢订单列表（需师傅账号）"
+					},
+					"response": []
+				},
+				{
+					"name": "抢单",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/staff/order/grab/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff",
+								"order",
+								"grab",
+								"1"
+							],
+							"variable": [
+								{
+									"key": "orderId",
+									"value": "1"
+								}
+							]
+						},
+						"description": "抢单，路径参数为订单ID"
+					},
+					"response": []
+				},
+				{
+					"name": "服务动作（出发/到达/开始/完成）",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"orderId\": 1,\n  \"action\": \"DEPART\",\n  \"lng\": 113.123,\n  \"lat\": 23.456,\n  \"photos\": []\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/staff/order/action",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff",
+								"order",
+								"action"
+							]
+						},
+						"description": "action枚举: DEPART(出发), ARRIVE(到达), START(开始), FINISH(完成)"
+					},
+					"response": []
+				},
+				{
+					"name": "发起现场加价/增项",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"orderId\": 1,\n  \"title\": \"增加一台空调清洗\",\n  \"amount\": 50.00,\n  \"photos\": [\"https://xxx/photo1.jpg\"]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/staff/order/extra-fee",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff",
+								"order",
+								"extra-fee"
+							]
+						},
+						"description": "发起现场加价请求"
+					},
+					"response": []
+				},
+				{
+					"name": "开启/关闭自动接单",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/staff/order/setting/auto-accept?enable=true",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"staff",
+								"order",
+								"setting",
+								"auto-accept"
+							],
+							"query": [
+								{
+									"key": "enable",
+									"value": "true"
+								}
+							]
+						},
+						"description": "开启或关闭自动接单"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "三、管理员端接口",
+			"item": [
+				{
+					"name": "3.1 管理员账号",
+					"item": [
+						{
+							"name": "创建普通管理员",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"username\": \"admin2\",\n  \"password\": \"123456\",\n  \"phone\": \"13700137000\",\n  \"nickname\": \"运营管理员\",\n  \"balance\": 1000.00\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/admin/create",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"admin",
+										"create"
+									]
+								},
+								"description": "创建普通管理员（需超级管理员权限）"
+							},
+							"response": []
+						},
+						{
+							"name": "普通管理员登录",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"var jsonData = pm.response.json();",
+											"",
+											"if(jsonData.data && jsonData.data.token) {",
+											"    pm.collectionVariables.set(\"token\", jsonData.data.token);",
+											"    console.log(\"Token已自动保存到变量: \" + jsonData.data.token);",
+											"}"
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"usernameOrPhone\": \"admin2\",\n  \"password\": \"123456\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/user/login",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"user",
+										"login"
+									]
+								},
+								"description": "用户登录接口，登录成功后自动保存Token到变量"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "3.2 服务管理",
+					"item": [
+						{
+							"name": "创建服务类型",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"categoryId\": 1,\n  \"title\": \"日常保洁\",\n  \"basePrice\": 80.00,\n  \"unit\": \"小时\",\n  \"depositType\": 1,\n  \"description\": \"日常保洁服务\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/service/create",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"service",
+										"create"
+									]
+								},
+								"description": "创建新的服务类型"
+							},
+							"response": []
+						},
+						{
+							"name": "修改服务类型",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"categoryId\": 1,\n  \"title\": \"日常保洁（升级版）\",\n  \"basePrice\": 90.00,\n  \"unit\": \"小时\",\n  \"depositType\": 1,\n  \"description\": \"日常保洁服务\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/service/1",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"service",
+										"1"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "1"
+										}
+									]
+								},
+								"description": "修改服务类型"
+							},
+							"response": []
+						},
+						{
+							"name": "删除服务类型",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/service/1",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"service",
+										"1"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "1"
+										}
+									]
+								},
+								"description": "删除服务类型"
+							},
+							"response": []
+						},
+						{
+							"name": "获取单个服务详情",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/service/1",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"service",
+										"1"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "1"
+										}
+									]
+								},
+								"description": "获取服务详情"
+							},
+							"response": []
+						},
+						{
+							"name": "分页查询服务列表",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/service/page?page=1&pageSize=20",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"service",
+										"page"
+									],
+									"query": [
+										{
+											"key": "categoryId",
+											"value": "1",
+											"disabled": true
+										},
+										{
+											"key": "title",
+											"value": "保洁",
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "pageSize",
+											"value": "20"
+										}
+									]
+								},
+								"description": "管理员端查询服务列表"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "3.3 优惠券管理",
+					"item": [
+						{
+							"name": "创建优惠券",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"新用户立减10元\",\n  \"couponType\": 1,\n  \"amount\": 10.00,\n  \"minAmount\": 0.00,\n  \"price\": 1.00,\n  \"totalCount\": 1000,\n  \"receiveLimit\": 1,\n  \"obtainChannel\": 0,\n  \"receiveStartTime\": \"2025-02-20T00:00:00\",\n  \"receiveEndTime\": \"2025-03-01T23:59:59\",\n  \"useStartTime\": \"2025-02-20T00:00:00\",\n  \"useEndTime\": \"2025-03-10T23:59:59\",\n  \"remark\": \"新用户专享\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/coupon/create",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"coupon",
+										"create"
+									]
+								},
+								"description": "创建优惠券模板"
+							},
+							"response": []
+						},
+						{
+							"name": "修改优惠券",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"新用户立减15元\",\n  \"couponType\": 1,\n  \"amount\": 15.00,\n  \"minAmount\": 0.00,\n  \"price\": 1.00,\n  \"totalCount\": 1000,\n  \"receiveLimit\": 1,\n  \"obtainChannel\": 0,\n  \"receiveStartTime\": \"2025-02-20T00:00:00\",\n  \"receiveEndTime\": \"2025-03-01T23:59:59\",\n  \"useStartTime\": \"2025-02-20T00:00:00\",\n  \"useEndTime\": \"2025-03-10T23:59:59\",\n  \"remark\": \"新用户专享\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/coupon/1",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"coupon",
+										"1"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "1"
+										}
+									]
+								},
+								"description": "修改优惠券信息"
+							},
+							"response": []
+						},
+						{
+							"name": "上架/下架优惠券",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": 1\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/coupon/1/status",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"coupon",
+										"1",
+										"status"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "1"
+										}
+									]
+								},
+								"description": "status: 0-下架, 1-上架"
+							},
+							"response": []
+						},
+						{
+							"name": "分页查询优惠券列表",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/coupon/page?status=1&page=1&pageSize=10",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"coupon",
+										"page"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "1"
+										},
+										{
+											"key": "name",
+											"value": "新用户",
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "pageSize",
+											"value": "10"
+										}
+									]
+								},
+								"description": "管理员端查询优惠券列表"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "3.4 类目管理",
+					"item": [
+						{
+							"name": "创建类目",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"parentId\": 0,\n  \"name\": \"日常保洁\",\n  \"icon\": \"https://xxx/icon-clean.png\",\n  \"formConfig\": \"{\\\"fields\\\":[{\\\"name\\\":\\\"rooms\\\",\\\"type\\\":\\\"number\\\"}]}\",\n  \"sort\": 0,\n  \"isShow\": 1\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/category/create",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"category",
+										"create"
+									]
+								},
+								"description": "创建类目"
+							},
+							"response": []
+						},
+						{
+							"name": "修改类目",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"parentId\": 0,\n  \"name\": \"日常保洁（更新）\",\n  \"icon\": \"https://xxx/icon-clean-new.png\",\n  \"formConfig\": \"{\\\"fields\\\":[{\\\"name\\\":\\\"rooms\\\",\\\"type\\\":\\\"number\\\"}]}\",\n  \"sort\": 1,\n  \"isShow\": 1\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/category/1",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"category",
+										"1"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "1"
+										}
+									]
+								},
+								"description": "修改类目"
+							},
+							"response": []
+						},
+						{
+							"name": "删除类目",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/category/1",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"category",
+										"1"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "1"
+										}
+									]
+								},
+								"description": "删除类目"
+							},
+							"response": []
+						},
+						{
+							"name": "获取单个类目详情",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/category/1",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"category",
+										"1"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "1"
+										}
+									]
+								},
+								"description": "获取类目详情"
+							},
+							"response": []
+						},
+						{
+							"name": "分页查询类目列表",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/category/page?name=保洁&page=1&pageSize=10",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"category",
+										"page"
+									],
+									"query": [
+										{
+											"key": "name",
+											"value": "保洁"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "pageSize",
+											"value": "10"
+										}
+									]
+								},
+								"description": "分页查询类目列表（按名称模糊）"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "3.5 服务人员申请审核",
+					"item": [
+						{
+							"name": "申请列表",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/staff/apply/list?status=0&page=1&pageSize=10",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"staff",
+										"apply",
+										"list"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "0",
+											"description": "0-待审核, 1-通过, 2-驳回"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "pageSize",
+											"value": "10"
+										}
+									]
+								},
+								"description": "查看服务人员申请列表"
+							},
+							"response": []
+						},
+						{
+							"name": "审核申请（通过/驳回）",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"applyId\": 1,\n  \"approved\": true,\n  \"rejectReason\": null\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/staff/apply/audit",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"staff",
+										"apply",
+										"audit"
+									]
+								},
+								"description": "审核申请：approved=true通过，false驳回"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "3.6 结算配置",
+					"item": [
+						{
+							"name": "获取当前结算配置",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/settle/config",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"settle",
+										"config"
+									]
+								},
+								"description": "获取结算配置"
+							},
+							"response": []
+						},
+						{
+							"name": "保存结算配置",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"mode\": \"percent\",\n  \"fixedAmount\": 0,\n  \"percent\": 0.20\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/settle/config",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"settle",
+										"config"
+									]
+								},
+								"description": "保存结算配置：mode=percent按比例，mode=fixed固定金额"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "3.7 派单配置",
+					"item": [
+						{
+							"name": "获取派单配置",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/dispatch/config",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"dispatch",
+										"config"
+									]
+								},
+								"description": "获取派单配置"
+							},
+							"response": []
+						},
+						{
+							"name": "保存派单配置",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"enableAuto\": true,\n  \"weightScore\": 0.5,\n  \"weightDistance\": 0.3,\n  \"weightPunctual\": 0.2,\n  \"radiusKm\": 5,\n  \"maxConcurrentOrders\": 3\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/v1/admin/dispatch/config",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"admin",
+										"dispatch",
+										"config"
+									]
+								},
+								"description": "保存派单配置"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

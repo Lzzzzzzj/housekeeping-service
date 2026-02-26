@@ -1,7 +1,6 @@
 package com.example.back.service;
 
 import com.example.back.dto.OrderCreateDTO;
-import com.example.back.dto.OrderPayVO;
 import com.example.back.entity.oms.OmsOrder;
 
 import java.util.List;
@@ -14,9 +13,9 @@ public interface UserOrderService {
     OmsOrder createOrder(Long memberId, OrderCreateDTO dto);
 
     /**
-     * 发起支付 (返回预支付参数，占位实现)
+     * 使用余额支付订单：校验并扣减用户余额，成功后将订单置为待接单。
      */
-    OrderPayVO pay(Long memberId, String orderSn);
+    void pay(Long memberId, String orderSn);
 
     /**
      * 支付成功回调：将订单置为待接单并触发自动派单。

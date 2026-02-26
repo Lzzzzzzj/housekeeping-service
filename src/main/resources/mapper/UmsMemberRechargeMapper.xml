@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.back.mapper.UmsMemberRechargeMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.back.entity.ums.UmsMemberRecharge">
+        <id column="id" property="id"/>
+        <result column="member_id" property="memberId"/>
+        <result column="recharge_sn" property="rechargeSn"/>
+        <result column="amount" property="amount"/>
+        <result column="pay_channel" property="payChannel"/>
+        <result column="pay_status" property="payStatus"/>
+        <result column="wechat_prepay_id" property="wechatPrepayId"/>
+        <result column="wechat_transaction_id" property="wechatTransactionId"/>
+        <result column="notify_time" property="notifyTime"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ums_member_recharge
+        (member_id, recharge_sn, amount, pay_channel, pay_status, wechat_prepay_id)
+        VALUES
+        (#{memberId}, #{rechargeSn}, #{amount}, #{payChannel}, #{payStatus}, #{wechatPrepayId})
+    </insert>
+
+    <select id="selectByRechargeSn" resultMap="BaseResultMap">
+        SELECT id, member_id, recharge_sn, amount, pay_channel, pay_status,
+               wechat_prepay_id, wechat_transaction_id, notify_time, create_time
+        FROM ums_member_recharge
+        WHERE recharge_sn = #{rechargeSn}
+    </select>
+
+    <update id="updatePaySuccess">
+        UPDATE ums_member_recharge
+        SET pay_status = 1,
+            wechat_transaction_id = #{wechatTransactionId},
+            notify_time = NOW()
+        WHERE id = #{id}
+          AND pay_status = 0
+    </update>
+
+    <select id="selectByMemberId" resultMap="BaseResultMap">
+        SELECT id, member_id, recharge_sn, amount, pay_channel, pay_status,
+               wechat_prepay_id, wechat_transaction_id, notify_time, create_time
+        FROM ums_member_recharge
+        WHERE member_id = #{memberId}
+        ORDER BY id DESC
+    </select>
+
+</mapper>
+
