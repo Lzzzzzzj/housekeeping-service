@@ -22,6 +22,7 @@ import com.example.back.mapper.UmsMemberMapper;
 import com.example.back.mapper.UmsStaffMapper;
 import com.example.back.mapper.UmsStaffWalletLogMapper;
 import com.example.back.service.AutoDispatchService;
+import com.example.back.service.OrderGrabPoolService;
 import com.example.back.service.UserOrderService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,6 +53,7 @@ public class UserOrderServiceImpl implements UserOrderService {
     private final MktUserCouponMapper mktUserCouponMapper;
     private final AutoDispatchService autoDispatchService;
     private final ObjectMapper objectMapper;
+    private final OrderGrabPoolService orderGrabPoolService;
 
     @Override
     @Transactional
@@ -208,6 +210,12 @@ public class UserOrderServiceImpl implements UserOrderService {
         log.setRemark("支付成功，待接单");
         omsOrderStatusLogMapper.insert(log);
 
+        // 进入待接单池（抢单池），score 使用预约时间（秒级时间戳）
+        double score = order.getAppointmentTime() != null
+                ? order.getAppointmentTime().atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
+                : System.currentTimeMillis() / 1000.0;
+        orderGrabPoolService.addToPool(order.getId(), score);
+
         autoDispatchService.tryAutoAssign(order.getId());
     }
 
@@ -235,6 +243,9 @@ public class UserOrderServiceImpl implements UserOrderService {
 
         int preStatus = order.getStatus();
         omsOrderMapper.updateStatus(orderId, OrderStatus.CANCELLED);
+
+        // 从待接单池中移除
+        orderGrabPoolService.removeFromPool(orderId);
 
         OmsOrderStatusLog log = new OmsOrderStatusLog();
         log.setOrderId(orderId);

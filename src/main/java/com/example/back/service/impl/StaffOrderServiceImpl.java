@@ -11,6 +11,8 @@ import com.example.back.mapper.OmsOrderExtraMapper;
 import com.example.back.mapper.OmsOrderMapper;
 import com.example.back.mapper.OmsOrderStatusLogMapper;
 import com.example.back.mapper.UmsStaffMapper;
+import com.example.back.service.RedisLockService;
+import com.example.back.service.OrderGrabPoolService;
 import com.example.back.service.StaffOrderService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,7 +20,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.geo.Point;
+import org.springframework.data.redis.core.GeoOperations;
+import org.springframework.data.redis.core.StringRedisTemplate;
+
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 师傅端 - 订单服务实现
@@ -27,11 +34,17 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StaffOrderServiceImpl implements StaffOrderService {
 
+    private static final String GEO_KEY_STAFF_LOCATIONS = "staff:locations";
+    private static final double DEFAULT_RADIUS_KM = 5.0;
+
     private final UmsStaffMapper umsStaffMapper;
     private final OmsOrderMapper omsOrderMapper;
     private final OmsOrderStatusLogMapper omsOrderStatusLogMapper;
     private final OmsOrderExtraMapper omsOrderExtraMapper;
     private final ObjectMapper objectMapper;
+    private final RedisLockService redisLockService;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final OrderGrabPoolService orderGrabPoolService;
 
     @Override
     @Transactional
@@ -41,33 +54,72 @@ public class StaffOrderServiceImpl implements StaffOrderService {
             throw new IllegalArgumentException("订单ID不能为空");
         }
 
-        OmsOrder order = omsOrderMapper.selectById(orderId);
-        if (order == null) {
-            throw new IllegalArgumentException("订单不存在");
+        String lockToken = redisLockService.tryLock("order:" + orderId, java.time.Duration.ofSeconds(5));
+        if (lockToken == null) {
+            throw new IllegalStateException("抢单人数过多，请稍后重试");
         }
-        if (order.getStatus() == null || !order.getStatus().equals(OrderStatus.PENDING_ACCEPT)) {
-            throw new IllegalArgumentException("当前订单状态不允许接单");
-        }
+        try {
+            OmsOrder order = omsOrderMapper.selectById(orderId);
+            if (order == null) {
+                throw new IllegalArgumentException("订单不存在");
+            }
+            if (order.getStatus() == null || !order.getStatus().equals(OrderStatus.PENDING_ACCEPT)) {
+                throw new IllegalArgumentException("当前订单状态不允许接单");
+            }
 
-        int affected = omsOrderMapper.grabOrder(orderId, staff.getId(), OrderStatus.PENDING_ACCEPT);
-        if (affected == 0) {
-            throw new IllegalStateException("抢单失败，订单可能已被其他服务人员接走");
-        }
+            int affected = omsOrderMapper.grabOrder(orderId, staff.getId(), OrderStatus.PENDING_ACCEPT);
+            if (affected == 0) {
+                throw new IllegalStateException("抢单失败，订单可能已被其他服务人员接走");
+            }
 
-        OmsOrderStatusLog log = new OmsOrderStatusLog();
-        log.setOrderId(orderId);
-        log.setPreStatus(order.getStatus());
-        log.setPostStatus(OrderStatus.PENDING_SERVICE);
-        log.setOperator("staff_user:" + staffUserId);
-        log.setRemark("服务人员接单");
-        omsOrderStatusLogMapper.insert(log);
+            // 抢单成功后从抢单池中移除该订单
+            orderGrabPoolService.removeFromPool(orderId);
+
+            OmsOrderStatusLog log = new OmsOrderStatusLog();
+            log.setOrderId(orderId);
+            log.setPreStatus(order.getStatus());
+            log.setPostStatus(OrderStatus.PENDING_SERVICE);
+            log.setOperator("staff_user:" + staffUserId);
+            log.setRemark("服务人员接单");
+            omsOrderStatusLogMapper.insert(log);
+        } finally {
+            redisLockService.unlock("order:" + orderId, lockToken);
+        }
     }
 
     @Override
     public List<OmsOrder> listGrabPool(Long staffUserId) {
-        // 仅校验当前用户确实是审核通过的服务人员，当前实现不做基于地理位置的过滤
-        requireStaff(staffUserId);
-        return omsOrderMapper.selectGrabPool(OrderStatus.PENDING_ACCEPT);
+        UmsStaff staff = requireStaff(staffUserId);
+
+        // 1. 优先从 Redis 抢单池读取订单ID
+        List<Long> ids = orderGrabPoolService.listPoolIds(100);
+        List<OmsOrder> all;
+        if (ids.isEmpty()) {
+            // 兜底：从数据库拉取所有待接单订单
+            all = omsOrderMapper.selectGrabPool(OrderStatus.PENDING_ACCEPT);
+        } else {
+            all = ids.stream()
+                    .map(omsOrderMapper::selectById)
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+        }
+        if (all.isEmpty()) {
+            return all;
+        }
+
+        GeoOperations<String, String> geoOps = stringRedisTemplate.opsForGeo();
+        List<Point> positions = geoOps.position(GEO_KEY_STAFF_LOCATIONS, staff.getId().toString());
+        if (positions == null || positions.isEmpty() || positions.get(0) == null) {
+            // 未上报位置时，返回全部待接单，保持兼容
+            return all;
+        }
+        Point p = positions.get(0);
+        double staffLng = p.getX();
+        double staffLat = p.getY();
+
+        return all.stream()
+                .filter(o -> withinRadius(o, staffLat, staffLng, DEFAULT_RADIUS_KM))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -211,6 +263,40 @@ public class StaffOrderServiceImpl implements StaffOrderService {
             throw new IllegalArgumentException("服务人员尚未审核通过，不能操作订单");
         }
         return staff;
+    }
+
+    private boolean withinRadius(OmsOrder order, double staffLat, double staffLng, double radiusKm) {
+        if (order == null || order.getAddressInfo() == null) {
+            return false;
+        }
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(order.getAddressInfo());
+            com.fasterxml.jackson.databind.JsonNode lngNode = node.get("lng");
+            com.fasterxml.jackson.databind.JsonNode latNode = node.get("lat");
+            if (lngNode == null || latNode == null || !lngNode.isNumber() || !latNode.isNumber()) {
+                return false;
+            }
+            double orderLng = lngNode.asDouble();
+            double orderLat = latNode.asDouble();
+            double distKm = distanceKm(staffLat, staffLng, orderLat, orderLng);
+            return distKm <= radiusKm;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private double distanceKm(double lat1, double lng1, double lat2, double lng2) {
+        final double R = 6371.0; // 地球半径 km
+        double radLat1 = Math.toRadians(lat1);
+        double radLat2 = Math.toRadians(lat2);
+        double deltaLat = radLat2 - radLat1;
+        double deltaLng = Math.toRadians(lng2 - lng1);
+
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
+                + Math.cos(radLat1) * Math.cos(radLat2)
+                * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 }
 
